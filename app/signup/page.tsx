@@ -2,6 +2,8 @@
 
 import Link from "next/link"
 import { signIn } from "next-auth/react"
+import ToastContainer from "@/components/Toast"
+import { useToast } from "@/hooks/useToast"
 
 const languages = [
   { value: "en", label: "English" },
@@ -19,13 +21,19 @@ const inputClass = `
 const labelClass = "section-label block mb-2"
 
 export default function SignupPage() {
-  function handleSubmit(e: React.FormEvent) {
+  const { toasts, addToast, removeToast } = useToast()
+
+  function handleSubmit(e: React.SubmitEvent) {
     e.preventDefault()
-    // TODO: connect to Spring Boot auth API
+    // TODO: connect to Spring Boot auth API and on success:
+        e.preventDefault()
+    // on error:
+    addToast("Something went wrong. Please try again.", "error")
   }
 
   return (
-    <main className="mobile-screen px-8 md:px-16 lg:px-24 py-16">
+    <>
+      <main className="mobile-screen px-8 md:px-16 lg:px-24 py-16">
       <div className="grid lg:grid-cols-2 gap-16 items-start">
 
         {/* Left — branding + context */}
@@ -160,6 +168,8 @@ export default function SignupPage() {
         </div>
 
       </div>
-    </main>
+      </main>
+      <ToastContainer toasts={toasts} removeToast={removeToast} />
+    </>
   )
 }
