@@ -2,20 +2,24 @@
 
 import { useState } from "react"
 import Link from "next/link"
+import { useToast } from "@/hooks/useToast"
 
 type Status = "safe" | "triggered"
 
 export default function PanicPage() {
   const [status, setStatus] = useState<Status>("safe")
+  const { addToast } = useToast()
 
   function handleTrigger() {
     setStatus("triggered")
     // TODO: call Spring Boot API → Twilio SMS to emergency contacts
+    addToast("Alert sent to your emergency contacts.", "error")
   }
 
   function handleReset() {
     setStatus("safe")
     // TODO: notify contacts that user is safe
+    addToast("Glad you're safe.", "success")
   }
 
   return (

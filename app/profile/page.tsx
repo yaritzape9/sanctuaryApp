@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useToast } from "@/hooks/useToast"
 
 const languages = [
   { value: "en", label: "English" },
@@ -22,6 +23,8 @@ export default function ProfilePage() {
   const [language, setLanguage] = useState("en")
   const [contacts, setContacts] = useState<EmergencyContact[]>([])
   const [editingInfo, setEditingInfo] = useState(false)
+  const { addToast } = useToast()
+
 
   function addContact() {
     if (contacts.length >= 5) return
@@ -38,10 +41,11 @@ export default function ProfilePage() {
     setContacts((prev) => prev.filter((c) => c.id !== id))
   }
 
-  function handleSaveInfo(e: React.FormEvent) {
+  function handleSaveInfo(e: React.SubmitEvent) {
     e.preventDefault()
     setEditingInfo(false)
     // TODO: connect to Spring Boot API
+    addToast("Profile saved.", "success")
   }
 
   const inputClass = `
@@ -231,7 +235,7 @@ export default function ProfilePage() {
                     </button>
                   </div>
                 ))}
-                <button className="btn-primary mt-2">
+                <button className="btn-primary mt-2" onClick={() => addToast("Contacts saved.", "success")}>
                   Save contacts
                 </button>
               </div>

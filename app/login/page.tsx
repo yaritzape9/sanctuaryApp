@@ -2,6 +2,8 @@
 
 import Link from "next/link"
 import { signIn } from "next-auth/react"
+import ToastContainer from "@/components/Toast"
+import { useToast } from "@/hooks/useToast"
 
 const inputClass = `
   w-full border border-sanctuary-border bg-sanctuary-surface rounded
@@ -12,13 +14,18 @@ const inputClass = `
 const labelClass = "section-label block mb-2"
 
 export default function LoginPage() {
-  function handleSubmit(e: React.FormEvent) {
+  const { toasts, addToast, removeToast } = useToast()
+
+  function handleSubmit(e: React.SubmitEvent) {
     e.preventDefault()
     // TODO: connect to Spring Boot auth API
+    // on error:
+    addToast("Welcome back!", "success")
   }
 
   return (
-    <main className="mobile-screen px-8 md:px-16 lg:px-24 py-16">
+    <>
+      <main className="mobile-screen px-8 md:px-16 lg:px-24 py-16">
       <div className="grid lg:grid-cols-2 gap-16 items-start">
 
         {/* Left — branding */}
@@ -117,6 +124,8 @@ export default function LoginPage() {
         </div>
 
       </div>
-    </main>
+      </main>
+      <ToastContainer toasts={toasts} removeToast={removeToast} />
+    </>
   )
 }
