@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from "react"
 import { GoogleMap, useJsApiLoader } from "@react-google-maps/api"
+import { SkeletonMap } from "@/components/Skeleton"
 
 const mapContainerStyle = {
   width: "100%",
@@ -10,7 +11,7 @@ const mapContainerStyle = {
 
 const defaultCenter = {
   lat: 40.7128,
-  lng: -74.006, // New York — update to your target city
+  lng: -74.006,
 }
 
 const darkMapStyles = [
@@ -29,6 +30,52 @@ const darkMapStyles = [
   { featureType: "transit", stylers: [{ visibility: "off" }] },
   { featureType: "administrative", elementType: "geometry", stylers: [{ color: "#1f2835" }] },
 ]
+
+function MapSkeleton() {
+  return (
+    <div className="w-full space-y-4">
+      {/* Map area skeleton */}
+      <div className="w-full h-[60vh] rounded-xl bg-sanctuary-surface animate-pulse border border-sanctuary-border relative overflow-hidden">
+        {/* Fake map grid lines */}
+        <div className="absolute inset-0 opacity-10">
+          {[...Array(6)].map((_, i) => (
+            <div
+              key={`h-${i}`}
+              className="absolute w-full h-px bg-white/20"
+              style={{ top: `${(i + 1) * 14}%` }}
+            />
+          ))}
+          {[...Array(8)].map((_, i) => (
+            <div
+              key={`v-${i}`}
+              className="absolute h-full w-px bg-white/20"
+              style={{ left: `${(i + 1) * 11}%` }}
+            />
+          ))}
+        </div>
+        {/* Fake zoom controls */}
+        <div className="absolute top-4 right-4 flex flex-col gap-1">
+          <div className="w-8 h-8 rounded bg-white/5" />
+          <div className="w-8 h-8 rounded bg-white/5" />
+        </div>
+        {/* Loading label */}
+        <div className="absolute inset-0 flex items-center justify-center">
+          <p className="text-xs text-neutral-700 tracking-widest uppercase">
+            Loading map...
+          </p>
+        </div>
+      </div>
+
+      {/* Empty state skeleton */}
+      <div className="border border-dashed border-white/5 rounded-xl px-6 py-8">
+        <div className="flex flex-col items-center gap-2">
+          <div className="h-3 w-48 rounded bg-white/5 animate-pulse" />
+          <div className="h-2 w-36 rounded bg-white/5 animate-pulse" />
+        </div>
+      </div>
+    </div>
+  )
+}
 
 export default function MapPage() {
   const [map, setMap] = useState<google.maps.Map | null>(null)
@@ -73,44 +120,45 @@ export default function MapPage() {
 
       {/* Map */}
       <section>
-        <div className="w-full h-[60vh] rounded-xl overflow-hidden border border-sanctuary-border">
-          {loadError && (
-            <div className="w-full h-full flex items-center justify-center bg-sanctuary-surface">
-              <p className="text-neutral-400 text-sm">Failed to load map. Check your API key.</p>
+        {loadError && (
+          <div className="w-full h-[60vh] rounded-xl border border-sanctuary-border bg-sanctuary-surface flex items-center justify-center">
+            <div className="text-center">
+              <p className="text-neutral-400 text-sm mb-1">Failed to load map.</p>
+              <p className="text-neutral-600 text-xs">Check your API key in .env.local</p>
             </div>
-          )}
+          </div>
+        )}
 
-          {!isLoaded && !loadError && (
-            <div className="w-full h-full flex items-center justify-center bg-sanctuary-surface animate-pulse">
-              <p className="text-neutral-600 text-sm">Loading map...</p>
+        {!isLoaded && !loadError && <MapSkeleton />}
+
+        {isLoaded && (
+          <>
+            <div className="w-full h-[60vh] rounded-xl overflow-hidden border border-sanctuary-border">
+              <GoogleMap
+                mapContainerStyle={mapContainerStyle}
+                center={defaultCenter}
+                zoom={12}
+                onLoad={onLoad}
+                onUnmount={onUnmount}
+                options={{
+                  styles: darkMapStyles,
+                  disableDefaultUI: true,
+                  zoomControl: true,
+                  streetViewControl: false,
+                  fullscreenControl: false,
+                }}
+              />
             </div>
-          )}
 
-          {isLoaded && (
-            <GoogleMap
-              mapContainerStyle={mapContainerStyle}
-              center={defaultCenter}
-              zoom={12}
-              onLoad={onLoad}
-              onUnmount={onUnmount}
-              options={{
-                styles: darkMapStyles,
-                disableDefaultUI: true,
-                zoomControl: true,
-                streetViewControl: false,
-                fullscreenControl: false,
-              }}
-            />
-          )}
-        </div>
-
-        {/* Empty state */}
-        <div className="mt-6 border border-dashed border-white/10 rounded-xl px-6 py-8 text-center">
-          <p className="text-sm text-neutral-600 mb-1">No sightings reported yet.</p>
-          <p className="text-xs text-neutral-700">
-            Be the first to report ICE activity in your area.
-          </p>
-        </div>
+            {/* Empty state */}
+            <div className="mt-6 border border-dashed border-white/10 rounded-xl px-6 py-8 text-center">
+              <p className="text-sm text-neutral-600 mb-1">No sightings reported yet.</p>
+              <p className="text-xs text-neutral-700">
+                Be the first to report ICE activity in your area.
+              </p>
+            </div>
+          </>
+        )}
       </section>
 
     </main>
