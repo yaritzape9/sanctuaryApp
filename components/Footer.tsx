@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { usePathname } from "next/navigation";
 
 const languages = [
   { code: "EN", label: "English" },
@@ -19,6 +20,7 @@ const footerLinks = [
 
 export default function Footer() {
   const [activeLang, setActiveLang] = useState("EN");
+  const pathname = usePathname();
 
   return (
     <footer className="w-full border-t border-white/10 bg-neutral-950 px-6 py-10 text-sm text-neutral-400">
@@ -38,7 +40,11 @@ export default function Footer() {
             <Link
               key={href}
               href={href}
-              className="transition-colors hover:text-white"
+              className={`transition-colors hover:text-white ${
+                pathname === href
+                  ? "text-white font-medium"
+                  : "text-neutral-400"
+              }`}
             >
               {label}
             </Link>
