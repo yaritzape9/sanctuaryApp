@@ -3,6 +3,7 @@
 import { useCallback, useState } from "react"
 import { GoogleMap, useJsApiLoader } from "@react-google-maps/api"
 import { SkeletonMap } from "@/components/Skeleton"
+import ReportModal from "@/components/ReportModal"
 
 const mapContainerStyle = {
   width: "100%",
@@ -79,6 +80,7 @@ function MapSkeleton() {
 
 export default function MapPage() {
   const [map, setMap] = useState<google.maps.Map | null>(null)
+  const [modalOpen, setModalOpen] = useState(false)
 
   const { isLoaded, loadError } = useJsApiLoader({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
@@ -107,9 +109,7 @@ export default function MapPage() {
           <div className="flex md:justify-end">
             <button
               className="btn-primary"
-              onClick={() => {
-                // TODO: open report sighting form/modal
-              }}
+              onClick={() => setModalOpen(true)}
             >
               + Report a sighting
             </button>
@@ -160,6 +160,11 @@ export default function MapPage() {
           </>
         )}
       </section>
+      {/* Modal */}
+      <ReportModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+      />
 
     </main>
   )
