@@ -4,6 +4,8 @@ import Footer from "@/components/Footer";
 import BackToTop from "@/components/BackToTopButton";
 import Navbar from "@/components/Navbar";
 import PageTransition from "@/components/PageTransition";
+import { LanguageProvider } from "@/context/LanguageContext"
+
 import PanicShortcut from "@/components/PanicShortcut"
 
 const fraunces = Fraunces({
@@ -31,13 +33,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" data-scroll-behavior="smooth" className={`${fraunces.variable} ${dmSans.variable}`}>
       <body className="grain bg-sanctuary-black font-body text-neutral-300 antialiased">
-        <Navbar />
-        <PanicShortcut />
-        <PageTransition>
-          {children}
-        </PageTransition>
-        <Footer />
-        <BackToTop />
+        <LanguageProvider>
+          <Navbar />
+          <PanicShortcut />
+          <PageTransition>
+            {children}
+          </PageTransition>
+          <Footer />
+          <BackToTop />
+        </LanguageProvider>
       </body>
     </html>
   );
