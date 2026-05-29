@@ -6,6 +6,7 @@ import Navbar from "@/components/Navbar";
 import PageTransition from "@/components/PageTransition";
 import { LanguageProvider } from "@/context/LanguageContext"
 
+import PanicShortcut from "@/components/PanicShortcut"
 
 const fraunces = Fraunces({
   subsets: ["latin"],
@@ -34,6 +35,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="grain bg-sanctuary-black font-body text-neutral-300 antialiased">
         <LanguageProvider>
           <Navbar />
+          <PanicShortcut />
           <PageTransition>
             {children}
           </PageTransition>
