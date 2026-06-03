@@ -37,8 +37,8 @@ export default function ReportModal({ isOpen, onClose, pinCoords }: ReportModalP
   const [date, setDate] = useState("")
   const [time, setTime] = useState("")
   const [submitting, setSubmitting] = useState(false)
+  const [locating, setLocating] = useState(false)
 
-  // Close on Escape key
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") onClose()
@@ -47,7 +47,6 @@ export default function ReportModal({ isOpen, onClose, pinCoords }: ReportModalP
     return () => window.removeEventListener("keydown", onKey)
   }, [onClose])
 
-  // Prevent body scroll when open
   useEffect(() => {
     document.body.style.overflow = isOpen ? "hidden" : ""
     return () => { document.body.style.overflow = "" }
@@ -69,6 +68,48 @@ export default function ReportModal({ isOpen, onClose, pinCoords }: ReportModalP
       })
       .finally(() => setLocating(false))
   }, [pinCoords])
+  function handleUseMyLocation() {
+    if (!navigator.geolocation) {
+      addToast("Geolocation is not supported by your browser.", "error")
+      return
+    }
+
+    setLocating(true)
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords
+
+        // TODO: swap this with Google Maps Geocoding API for a real address
+        // GET https://maps.googleapis.com/maps/api/geocode/json?latlng={lat},{lng}&key=YOUR_KEY
+        // For now we use coordinates as a fallback
+        try {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`
+          )
+          const data = await res.json()
+          const address = data.display_name || `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`
+          setLocation(address)
+          addToast("Location detected.", "success")
+        } catch {
+          // fallback to raw coordinates if reverse geocode fails
+          setLocation(`${latitude.toFixed(5)}, ${longitude.toFixed(5)}`)
+          addToast("Location detected (coordinates only).", "info")
+        }
+
+        setLocating(false)
+      },
+      (error) => {
+        setLocating(false)
+        if (error.code === error.PERMISSION_DENIED) {
+          addToast("Location access denied. Please enter manually.", "error")
+        } else {
+          addToast("Could not get your location. Please enter manually.", "error")
+        }
+      },
+      { timeout: 10000 }
+    )
+  }
 
   function handleSubmit(e: React.SubmitEvent) {
     e.preventDefault()
@@ -131,7 +172,24 @@ export default function ReportModal({ isOpen, onClose, pinCoords }: ReportModalP
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className={labelClass}>Location</label>
+              <div className="flex items-center justify-between mb-2">
+                <label className={labelClass}>Location</label>
+                <button
+                  type="button"
+                  onClick={handleUseMyLocation}
+                  disabled={locating}
+                  className="text-xs text-sanctuary-accent hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                >
+                  {locating ? (
+                    <>
+                      <span className="inline-block w-3 h-3 border border-sanctuary-accent border-t-transparent rounded-full animate-spin" />
+                      Detecting...
+                    </>
+                  ) : (
+                    "📍 Use my location"
+                  )}
+                </button>
+              </div>
               <input
                 type="text"
                 value={location}
