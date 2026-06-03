@@ -19,6 +19,7 @@ import ToastContainer from "@/components/Toast"
 interface ReportModalProps {
   isOpen: boolean
   onClose: () => void
+  pinCoords?: { lat: number; lng: number } | null  // add this
 }
 
 const inputClass = `
@@ -29,7 +30,7 @@ const inputClass = `
 
 const labelClass = "section-label block mb-2"
 
-export default function ReportModal({ isOpen, onClose }: ReportModalProps) {
+export default function ReportModal({ isOpen, onClose, pinCoords }: ReportModalProps) {
   const { toasts, addToast, removeToast } = useToast()
   const [location, setLocation] = useState("")
   const [description, setDescription] = useState("")
@@ -51,6 +52,23 @@ export default function ReportModal({ isOpen, onClose }: ReportModalProps) {
     document.body.style.overflow = isOpen ? "hidden" : ""
     return () => { document.body.style.overflow = "" }
   }, [isOpen])
+
+  useEffect(() => {
+    if (!pinCoords) return
+    setLocating(true)
+
+    fetch(
+      `https://nominatim.openstreetmap.org/reverse?lat=${pinCoords.lat}&lon=${pinCoords.lng}&format=json`
+    )
+      .then((res) => res.json())
+      .then((data) => {
+        setLocation(data.display_name || `${pinCoords.lat.toFixed(5)}, ${pinCoords.lng.toFixed(5)}`)
+      })
+      .catch(() => {
+        setLocation(`${pinCoords.lat.toFixed(5)}, ${pinCoords.lng.toFixed(5)}`)
+      })
+      .finally(() => setLocating(false))
+  }, [pinCoords])
 
   function handleSubmit(e: React.SubmitEvent) {
     e.preventDefault()

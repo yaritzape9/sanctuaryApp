@@ -1,11 +1,11 @@
 "use client"
 
-import { useState } from "react"
 import { translations, languages, type Lang } from "@/lib/translations/knowYourRights"
+import { useLanguage } from "../../context/LanguageContext"
 
 export default function KnowYourRightsPage() {
-  const [lang, setLang] = useState<Lang>("en")
-  const d = translations[lang]
+  const { lang, setLang } = useLanguage()
+  const d = translations[lang as Lang]
   const isRtl = lang === "ar"
 
   return (

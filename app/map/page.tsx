@@ -1,19 +1,11 @@
 "use client"
 
 import { useCallback, useState } from "react"
-import { GoogleMap, useJsApiLoader } from "@react-google-maps/api"
-import { SkeletonMap } from "@/components/Skeleton"
+import { GoogleMap, useJsApiLoader, Marker } from "@react-google-maps/api"
 import ReportModal from "@/components/ReportModal"
 
-const mapContainerStyle = {
-  width: "100%",
-  height: "100%",
-}
-
-const defaultCenter = {
-  lat: 40.7128,
-  lng: -74.006,
-}
+const mapContainerStyle = { width: "100%", height: "100%" }
+const defaultCenter = { lat: 40.7128, lng: -74.006 }
 
 const darkMapStyles = [
   { elementType: "geometry", stylers: [{ color: "#0f0e17" }] },
@@ -35,39 +27,23 @@ const darkMapStyles = [
 function MapSkeleton() {
   return (
     <div className="w-full space-y-4">
-      {/* Map area skeleton */}
       <div className="w-full h-[60vh] rounded-xl bg-sanctuary-surface animate-pulse border border-sanctuary-border relative overflow-hidden">
-        {/* Fake map grid lines */}
         <div className="absolute inset-0 opacity-10">
           {[...Array(6)].map((_, i) => (
-            <div
-              key={`h-${i}`}
-              className="absolute w-full h-px bg-white/20"
-              style={{ top: `${(i + 1) * 14}%` }}
-            />
+            <div key={`h-${i}`} className="absolute w-full h-px bg-white/20" style={{ top: `${(i + 1) * 14}%` }} />
           ))}
           {[...Array(8)].map((_, i) => (
-            <div
-              key={`v-${i}`}
-              className="absolute h-full w-px bg-white/20"
-              style={{ left: `${(i + 1) * 11}%` }}
-            />
+            <div key={`v-${i}`} className="absolute h-full w-px bg-white/20" style={{ left: `${(i + 1) * 11}%` }} />
           ))}
         </div>
-        {/* Fake zoom controls */}
         <div className="absolute top-4 right-4 flex flex-col gap-1">
           <div className="w-8 h-8 rounded bg-white/5" />
           <div className="w-8 h-8 rounded bg-white/5" />
         </div>
-        {/* Loading label */}
         <div className="absolute inset-0 flex items-center justify-center">
-          <p className="text-xs text-neutral-700 tracking-widest uppercase">
-            Loading map...
-          </p>
+          <p className="text-xs text-neutral-700 tracking-widest uppercase">Loading map...</p>
         </div>
       </div>
-
-      {/* Empty state skeleton */}
       <div className="border border-dashed border-white/5 rounded-xl px-6 py-8">
         <div className="flex flex-col items-center gap-2">
           <div className="h-3 w-48 rounded bg-white/5 animate-pulse" />
@@ -81,18 +57,27 @@ function MapSkeleton() {
 export default function MapPage() {
   const [map, setMap] = useState<google.maps.Map | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
+  const [pinCoords, setPinCoords] = useState<{ lat: number; lng: number } | null>(null)
 
   const { isLoaded, loadError } = useJsApiLoader({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
   })
 
-  const onLoad = useCallback((map: google.maps.Map) => {
-    setMap(map)
-  }, [])
+  const onLoad = useCallback((map: google.maps.Map) => setMap(map), [])
+  const onUnmount = useCallback(() => setMap(null), [])
 
-  const onUnmount = useCallback(() => {
-    setMap(null)
-  }, [])
+  function handleMapClick(e: google.maps.MapMouseEvent) {
+    if (!e.latLng) return
+    const lat = e.latLng.lat()
+    const lng = e.latLng.lng()
+    setPinCoords({ lat, lng })
+    setModalOpen(true)
+  }
+
+  function handleModalClose() {
+    setModalOpen(false)
+    setPinCoords(null)
+  }
 
   return (
     <main className="mobile-screen px-8 md:px-16 lg:px-24 py-16">
@@ -106,13 +91,15 @@ export default function MapPage() {
               Sightings map.
             </h1>
           </div>
-          <div className="flex md:justify-end">
-            <button
-              className="btn-primary"
-              onClick={() => setModalOpen(true)}
-            >
+          <div className="flex md:flex-col md:items-end gap-3">
+            <button className="btn-primary" onClick={() => setModalOpen(true)}>
               + Report a sighting
             </button>
+            {isLoaded && (
+              <p className="text-xs text-neutral-600">
+                Or click anywhere on the map to drop a pin
+              </p>
+            )}
           </div>
         </div>
         <div className="divider" />
@@ -140,17 +127,29 @@ export default function MapPage() {
                 zoom={12}
                 onLoad={onLoad}
                 onUnmount={onUnmount}
+                onClick={handleMapClick}
                 options={{
                   styles: darkMapStyles,
                   disableDefaultUI: true,
                   zoomControl: true,
                   streetViewControl: false,
                   fullscreenControl: false,
+                  cursor: "crosshair",
                 }}
-              />
+              >
+                {pinCoords && (
+                  <Marker
+                    position={pinCoords}
+                    draggable
+                    onDragEnd={(e) => {
+                      if (!e.latLng) return
+                      setPinCoords({ lat: e.latLng.lat(), lng: e.latLng.lng() })
+                    }}
+                  />
+                )}
+              </GoogleMap>
             </div>
 
-            {/* Empty state */}
             <div className="mt-6 border border-dashed border-white/10 rounded-xl px-6 py-8 text-center">
               <p className="text-sm text-neutral-600 mb-1">No sightings reported yet.</p>
               <p className="text-xs text-neutral-700">
@@ -160,10 +159,11 @@ export default function MapPage() {
           </>
         )}
       </section>
-      {/* Modal */}
+
       <ReportModal
         isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
+        onClose={handleModalClose}
+        pinCoords={pinCoords}
       />
 
     </main>
