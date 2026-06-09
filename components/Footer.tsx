@@ -1,15 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
 import { usePathname } from "next/navigation";
-
-const languages = [
-  { code: "EN", label: "English" },
-  { code: "ES", label: "Español" },
-  { code: "ZH", label: "中文" },
-  { code: "AR", label: "العربية" },
-];
+import { useLanguage } from "@/components/LanguageContext";
+import { languages } from "@/lib/translations/knowYourRights";
 
 const footerLinks = [
   { href: "/", label: "Home" },
@@ -19,7 +13,7 @@ const footerLinks = [
 ];
 
 export default function Footer() {
-  const [activeLang, setActiveLang] = useState("EN");
+  const { lang, setLang } = useLanguage();
   const pathname = usePathname();
 
   return (
@@ -41,9 +35,7 @@ export default function Footer() {
               key={href}
               href={href}
               className={`transition-colors hover:text-white ${
-                pathname === href
-                  ? "text-white font-medium"
-                  : "text-neutral-400"
+                pathname === href ? "text-white font-medium" : "text-neutral-400"
               }`}
             >
               {label}
@@ -52,19 +44,19 @@ export default function Footer() {
         </nav>
 
         {/* Language switcher */}
-        <div className="flex items-center gap-2">
-          {languages.map(({ code, label }) => (
+        <div className="flex items-center gap-2 flex-wrap justify-center">
+          {languages.map(({ code, label, abbr }) => (
             <button
               key={code}
-              onClick={() => setActiveLang(code)}
+              onClick={() => setLang(code)}
               title={label}
               className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                activeLang === code
+                lang === code
                   ? "bg-white text-black"
                   : "bg-white/10 hover:bg-white/20 text-neutral-300"
               }`}
             >
-              {code}
+              {abbr}
             </button>
           ))}
         </div>

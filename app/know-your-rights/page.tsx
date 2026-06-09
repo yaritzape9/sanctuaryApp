@@ -1,12 +1,13 @@
 "use client"
 
 import { translations, languages, type Lang } from "@/lib/translations/knowYourRights"
-import { useLanguage } from "../../context/LanguageContext"
+import { useLanguage } from "@/components/LanguageContext"
 
 export default function KnowYourRightsPage() {
   const { lang, setLang } = useLanguage()
   const d = translations[lang as Lang]
   const isRtl = lang === "ar"
+  const currentLanguage = languages.find((l) => l.code === lang)
 
   return (
     <main
@@ -24,21 +25,31 @@ export default function KnowYourRightsPage() {
             </h1>
           </div>
           <div className="flex flex-col gap-4 md:items-end">
-            <div className="flex gap-2 flex-wrap md:justify-end">
-              {languages.map((l) => (
-                <button
-                  key={l.code}
-                  onClick={() => setLang(l.code)}
-                  className={`px-4 py-1.5 rounded text-sm border transition-colors ${
-                    lang === l.code
-                      ? "bg-white text-black border-white"
-                      : "border-white/20 text-neutral-400 hover:border-white/40 hover:text-white"
-                  }`}
+
+            {/* Dropdown */}
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-neutral-400">Pick your language</span>
+              <div className="relative">
+                <select
+                  value={lang}
+                  onChange={(e) => setLang(e.target.value as Lang)}
+                  className="appearance-none bg-white/5 border border-white/20 text-white text-sm rounded-lg px-4 py-2.5 pr-9 cursor-pointer hover:border-white/40 focus:outline-none focus:border-white/60 transition-colors"
                 >
-                  {l.label}
-                </button>
-              ))}
+                  {languages.map((l) => (
+                    <option key={l.code} value={l.code} className="bg-neutral-900 text-white">
+                      {l.label}
+                    </option>
+                  ))}
+                </select>
+                {/* Chevron */}
+                <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+                  <svg className="w-4 h-4 text-neutral-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </div>
             </div>
+
             <p className="text-neutral-400 leading-relaxed md:text-right">
               {d.subtitle}
             </p>
