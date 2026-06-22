@@ -1,4 +1,5 @@
 "use client"
+import { useSession } from "next-auth/react"
 
 import { useState } from "react"
 import Link from "next/link"
@@ -9,18 +10,66 @@ type Status = "safe" | "triggered"
 export default function PanicPage() {
   const [status, setStatus] = useState<Status>("safe")
   const { addToast } = useToast()
+  const { data: session } = useSession()
 
-  function handleTrigger() {
+
+async function handleTrigger() {
+  // if (!session?.user?.email) {
+  //   addToast("Please log in before triggering an alert.", "error")
+  //   return
+  // }
+
+  let lat: number | undefined
+  let lng: number | undefined
+
+  try {
+    const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
+      navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000 })
+    )
+    lat = pos.coords.latitude
+    lng = pos.coords.longitude
+  } catch { /* proceed without location */ }
+
+  const MAX_RETRIES = 3
+  let attempt = 0
+  let sent = false
+
+  while (attempt < MAX_RETRIES && !sent) {
+    try {
+      const res = await fetch("/api/panic/trigger", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: session?.user?.email, lat, lng }),
+      })
+      if (!res.ok) throw new Error()
+      sent = true
+    } catch {
+      attempt++
+    }
+  }
+
+  if (sent) {
     setStatus("triggered")
-    // TODO: call Spring Boot API → Twilio SMS to emergency contacts
     addToast("Alert sent to your emergency contacts.", "error")
+  } else {
+    addToast("Could not send alert after 3 tries. Text your emergency contact directly.", "error")
   }
+}
 
-  function handleReset() {
+async function handleReset() {
+  try {
+    const res = await fetch("/api/panic/safe", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: session?.user?.email }),
+    })
+    if (!res.ok) throw new Error()
     setStatus("safe")
-    // TODO: notify contacts that user is safe
     addToast("Glad you're safe.", "success")
+  } catch {
+    addToast("Could not send safe status. Try again.", "error")
   }
+}
 
   return (
     <main className="mobile-screen px-8 md:px-16 lg:px-24 py-16">
