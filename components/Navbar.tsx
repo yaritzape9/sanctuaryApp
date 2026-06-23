@@ -3,9 +3,11 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useState, useEffect } from "react"
+import { useSession, signOut } from "next-auth/react"
 
-// TODO: replace with real auth session check
-const isLoggedIn = false
+
+const { data: session } = useSession()
+const isLoggedIn = !!session?.user
 
 const navLinks = [
   { label: "Home", href: "/" },
@@ -65,7 +67,10 @@ export default function Navbar() {
           <div className="hidden md:flex items-center gap-2">
             {isLoggedIn ? (
               <>
-                <button className="px-4 py-1.5 rounded text-sm border border-sanctuary-border text-neutral-400 hover:border-white/20 hover:text-white transition-colors">
+                <button
+                  onClick={() => signOut({ callbackUrl: "/" })}
+                  className="px-4 py-1.5 rounded text-sm border border-sanctuary-border text-neutral-400 hover:border-white/20 hover:text-white transition-colors"
+                >
                   Log out
                 </button>
                 <Link
@@ -153,7 +158,10 @@ export default function Navbar() {
                 >
                   🆘 Panic Button
                 </Link>
-                <button className="w-full py-3 rounded text-sm border border-sanctuary-border text-neutral-400 hover:border-white/20 hover:text-white transition-colors">
+                <button
+                  onClick={() => signOut({ callbackUrl: "/" })}
+                  className="px-4 py-1.5 rounded text-sm border border-sanctuary-border text-neutral-400 hover:border-white/20 hover:text-white transition-colors"
+                >
                   Log out
                 </button>
               </>
