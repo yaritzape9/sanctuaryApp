@@ -1,5 +1,7 @@
 "use client"
 
+import { useState } from "react"
+import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { signIn } from "next-auth/react"
 import ToastContainer from "@/components/Toast"
@@ -15,12 +17,32 @@ const labelClass = "section-label block mb-2"
 
 export default function LoginPage() {
   const { toasts, addToast, removeToast } = useToast()
+  const router = useRouter()
+  const [submitting, setSubmitting] = useState(false)
 
-  function handleSubmit(e: React.SubmitEvent) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    // TODO: connect to Spring Boot auth API
-    // on error:
+    setSubmitting(true)
+
+    const formData = new FormData(e.currentTarget)
+    const email = formData.get("email") as string
+    const password = formData.get("password") as string
+
+    const result = await signIn("credentials", {
+      email,
+      password,
+      redirect: false,
+    })
+
+    setSubmitting(false)
+
+    if (result?.error) {
+      addToast("Invalid email or password.", "error")
+      return
+    }
+
     addToast("Welcome back!", "success")
+    router.push("/")
   }
 
   return (
@@ -83,6 +105,7 @@ export default function LoginPage() {
               <label className={labelClass}>Email</label>
               <input
                 type="email"
+                name="email"
                 placeholder="you@example.com"
                 required
                 className={inputClass}
@@ -93,6 +116,7 @@ export default function LoginPage() {
               <label className={labelClass}>Password</label>
               <input
                 type="password"
+                name="password"
                 placeholder="••••••••"
                 required
                 className={inputClass}
@@ -109,9 +133,10 @@ export default function LoginPage() {
 
             <button
               type="submit"
-              className="btn-primary w-full justify-center"
+              disabled={submitting}
+              className="btn-primary w-full justify-center disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Log in
+              {submitting ? "Logging in…" : "Log in"}
             </button>
 
             <p className="text-center text-sm text-neutral-600">
