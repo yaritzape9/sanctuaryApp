@@ -36,7 +36,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           }
 
           const data = await res.json();
-
           if (!data?.token || !data?.userId) {
             return null;
           }
