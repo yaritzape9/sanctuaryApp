@@ -37,7 +37,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
           const data = await res.json();
 
-          // ⚠️ ASSUMPTION — confirm your backend returns these field names
           if (!data?.token || !data?.userId) {
             return null;
           }
@@ -58,13 +57,41 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     signIn: "/login",
   },
   callbacks: {
-    jwt({ token, user }) {
+    async jwt({ token, user, account, profile }) {
+      // Google sign-in: sync with backend to get a real user + JWT
+      if (account?.provider === "google" && profile) {
+        try {
+          const res = await fetch(`${API_URL}/api/auth/oauth-sync`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              email: profile.email,
+              name: profile.name,
+              googleId: profile.sub,
+            }),
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            if (data?.token && data?.userId) {
+              token.sub = data.userId;
+              token.backendToken = data.token;
+            }
+          } else {
+            console.error("oauth-sync failed:", res.status);
+          }
+        } catch (err) {
+          console.error("oauth-sync error:", err);
+        }
+      }
+
       if (user) {
         token.sub = user.id;
         if ("backendToken" in user && user.backendToken) {
           token.backendToken = user.backendToken as string;
         }
       }
+
       return token;
     },
     session({ session, token }) {
