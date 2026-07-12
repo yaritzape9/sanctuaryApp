@@ -3,6 +3,9 @@
 import { useCallback, useEffect, useState } from "react"
 import { GoogleMap, useJsApiLoader, Marker, Circle, InfoWindow } from "@react-google-maps/api"
 import ReportModal from "@/components/ReportModal"
+import { useSession } from "next-auth/react"
+import { useToast } from "@/hooks/useToast"
+import ToastContainer from "@/components/Toast"
 
 const mapContainerStyle = { width: "100%", height: "100%" }
 const SF_CENTER = { lat: 37.7749, lng: -122.4194 }
@@ -111,6 +114,17 @@ export default function MapPage() {
   const [fetchError, setFetchError] = useState(false)
   const [confirming, setConfirming] = useState<string | null>(null)
   const [locatingUser, setLocatingUser] = useState(false)
+  const { data: session } = useSession()
+  const isLoggedIn = !!session?.user
+  const { toasts, addToast, removeToast } = useToast()
+
+  function requireAuth() {
+    if (!isLoggedIn) {
+      addToast("Sign in to add a report", "info")
+      return false
+    }
+    return true
+  }
 
   const { isLoaded, loadError } = useJsApiLoader({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
@@ -151,6 +165,7 @@ export default function MapPage() {
 
   function handleMapClick(e: google.maps.MapMouseEvent) {
     if (!e.latLng) return
+    if (!requireAuth()) return
     setPinCoords({ lat: e.latLng.lat(), lng: e.latLng.lng() })
     setModalOpen(true)
   }
@@ -207,12 +222,13 @@ export default function MapPage() {
             </h1>
           </div>
         <div className="flex flex-wrap items-center md:justify-end gap-3">
-          <button className="btn-primary" onClick={() => setModalOpen(true)}>
+          <button className="btn-primary" onClick={() => { if (requireAuth()) setModalOpen(true) }}>
             + Report a sighting
           </button>
           <button
             className="btn-outline"
             onClick={() => {
+              if (!requireAuth()) return
               setModalOpen(true)
               handleUseMyLocation()
             }}
@@ -416,6 +432,7 @@ export default function MapPage() {
         onUseMyLocation={handleUseMyLocation}
         locatingUser={locatingUser}
       />
+      <ToastContainer toasts={toasts} removeToast={removeToast} />
     </main>
   )
 }
