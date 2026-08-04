@@ -11,10 +11,25 @@ const languages = [
   { value: "ar", label: "العربية" },
 ]
 
+const relationships = [
+  { value: "PARENT", label: "Parent" },
+  { value: "SIBLING", label: "Sibling" },
+  { value: "SPOUSE", label: "Spouse" },
+  { value: "CHILD", label: "Child" },
+  { value: "FRIEND", label: "Friend" },
+  { value: "ROOMMATE", label: "Roommate" },
+  { value: "OTHER", label: "Other" },
+]
+
+function relationshipLabel(value: string) {
+  return relationships.find((r) => r.value === value)?.label ?? value
+}
+
 interface EmergencyContact {
   id: string
   name: string
   phone: string
+  relationship: string
   _tempId?: string
   _saved: boolean
 }
@@ -44,7 +59,7 @@ export default function ProfilePage() {
 
     fetch("/api/contacts")
       .then((r) => r.json())
-      .then((data: { id: string; name: string; phone: string }[]) => {
+      .then((data: { id: string; name: string; phone: string; relationship: string }[]) => {
         setContacts(data.map((c) => ({ ...c, _saved: true })))
       })
       .catch(() => addToast("Failed to load contacts.", "error"))
@@ -55,11 +70,11 @@ export default function ProfilePage() {
     if (contacts.length >= 5) return
     setContacts((prev) => [
       ...prev,
-      { id: "", name: "", phone: "", _tempId: crypto.randomUUID(), _saved: false },
+      { id: "", name: "", phone: "", relationship: "OTHER", _tempId: crypto.randomUUID(), _saved: false },
     ])
   }
 
-  function updateContactField(key: string, field: "name" | "phone", value: string) {
+  function updateContactField(key: string, field: "name" | "phone" | "relationship", value: string) {
     setContacts((prev) =>
       prev.map((c) => {
         const match = c._saved ? c.id === key : c._tempId === key
@@ -105,17 +120,17 @@ export default function ProfilePage() {
         const res = await fetch("/api/contacts", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name: contact.name, phone: contact.phone }),
+          body: JSON.stringify({ name: contact.name, phone: contact.phone, relationship: contact.relationship }),
         })
 
         if (!res.ok) throw new Error()
 
-        const saved: { id: string; name: string; phone: string } = await res.json()
+        const saved: { id: string; name: string; phone: string; relationship: string } = await res.json()
 
         setContacts((prev) =>
           prev.map((c) =>
             c._tempId === contact._tempId
-              ? { id: saved.id, name: saved.name, phone: saved.phone, _saved: true }
+              ? { id: saved.id, name: saved.name, phone: saved.phone, relationship: saved.relationship, _saved: true }
               : c
           )
         )
@@ -279,42 +294,64 @@ export default function ProfilePage() {
                   return (
                     <div key={key}>
                       {contact._saved ? (
-                        // Saved — display as text with delete button
-                        <div className="grid grid-cols-[1fr_1fr_auto] gap-3 items-center py-2">
-                          <p className="text-sm text-neutral-300 px-1">{contact.name}</p>
-                          <p className="text-sm text-neutral-300 px-1">{contact.phone}</p>
-                          <button
-                            onClick={() => removeContact(contact)}
-                            className="text-neutral-600 hover:text-red-400 transition-colors text-lg leading-none"
-                            aria-label="Remove contact"
-                          >
-                            ×
-                          </button>
+                        // Saved — display as text with delete button, relationship as pill badge
+                        <div className="py-2">
+                          <div className="grid grid-cols-[1fr_1fr_auto] gap-3 items-center">
+                            <p className="text-sm text-neutral-300 px-1">{contact.name}</p>
+                            <p className="text-sm text-neutral-300 px-1">{contact.phone}</p>
+                            <button
+                              onClick={() => removeContact(contact)}
+                              className="text-neutral-600 hover:text-red-400 transition-colors text-lg leading-none"
+                              aria-label="Remove contact"
+                            >
+                              ×
+                            </button>
+                          </div>
+                          <div className="px-1 mt-1.5">
+                            <span className="inline-block px-2.5 py-0.5 rounded-full text-xs border border-sanctuary-border text-neutral-400">
+                              {relationshipLabel(contact.relationship)}
+                            </span>
+                          </div>
                         </div>
                       ) : (
-                        // Unsaved — editable inputs
-                        <div className="grid grid-cols-[1fr_1fr_auto] gap-3 items-center">
-                          <input
-                            type="text"
-                            value={contact.name}
-                            onChange={(e) => updateContactField(key, "name", e.target.value)}
-                            placeholder={`Contact ${i + 1} name`}
-                            className={inputClass}
-                          />
-                          <input
-                            type="tel"
-                            value={contact.phone}
-                            onChange={(e) => updateContactField(key, "phone", e.target.value)}
-                            placeholder="Phone number"
-                            className={inputClass}
-                          />
-                          <button
-                            onClick={() => removeContact(contact)}
-                            className="text-neutral-600 hover:text-red-400 transition-colors text-lg leading-none"
-                            aria-label="Remove contact"
-                          >
-                            ×
-                          </button>
+                        // Unsaved — editable inputs + relationship dropdown
+                        <div>
+                          <div className="grid grid-cols-[1fr_1fr_auto] gap-3 items-center">
+                            <input
+                              type="text"
+                              value={contact.name}
+                              onChange={(e) => updateContactField(key, "name", e.target.value)}
+                              placeholder={`Contact ${i + 1} name`}
+                              className={inputClass}
+                            />
+                            <input
+                              type="tel"
+                              value={contact.phone}
+                              onChange={(e) => updateContactField(key, "phone", e.target.value)}
+                              placeholder="Phone number"
+                              className={inputClass}
+                            />
+                            <button
+                              onClick={() => removeContact(contact)}
+                              className="text-neutral-600 hover:text-red-400 transition-colors text-lg leading-none"
+                              aria-label="Remove contact"
+                            >
+                              ×
+                            </button>
+                          </div>
+                          <div className="mt-2">
+                            <select
+                              value={contact.relationship}
+                              onChange={(e) => updateContactField(key, "relationship", e.target.value)}
+                              className={inputClass}
+                            >
+                              {relationships.map((r) => (
+                                <option key={r.value} value={r.value}>
+                                  {r.label}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
                         </div>
                       )}
                     </div>
