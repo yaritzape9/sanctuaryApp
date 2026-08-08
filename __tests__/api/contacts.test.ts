@@ -56,6 +56,17 @@ describe("contacts proxy routes — Authorization header", () => {
     expect(global.fetch).not.toHaveBeenCalled()
   })
 
+  it("GET /api/contacts returns the backend's body and status as-is", async () => {
+    const contacts = [{ id: "c1", name: "Ana", relationship: "PARENT" }]
+    mockFetchOnce(contacts, 200)
+
+    const res = await GET()
+    const body = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(body).toEqual(contacts)
+  })
+
   it("POST /api/contacts forwards Bearer token", async () => {
     mockFetchOnce({ id: "contact-1" }, 201)
     const req = { json: async () => ({ name: "Ana", phone: "555-1234" }) } as unknown as Request
@@ -71,6 +82,18 @@ describe("contacts proxy routes — Authorization header", () => {
         }),
       })
     )
+  })
+
+  it("POST /api/contacts returns the backend's body and status as-is", async () => {
+    const created = { id: "c2", name: "Ana", relationship: "PARENT" }
+    mockFetchOnce(created, 201)
+    const req = { json: async () => ({ name: "Ana", phone: "555-1234" }) } as unknown as Request
+
+    const res = await POST(req)
+    const body = await res.json()
+
+    expect(res.status).toBe(201)
+    expect(body).toEqual(created)
   })
 
   it("DELETE /api/contacts/[contactId] forwards Bearer token", async () => {
@@ -101,6 +124,26 @@ describe("contacts proxy routes — Authorization header", () => {
 
     expect(res.status).toBe(401)
     expect(global.fetch).not.toHaveBeenCalled()
+  })
+
+  it("DELETE /api/contacts/[contactId] returns 204 with no body on successful delete", async () => {
+    mockFetchOnce(null, 204)
+    const req = {} as Request
+    const params = Promise.resolve({ contactId: "contact-1" })
+
+    const res = await DELETE(req, { params })
+
+    expect(res.status).toBe(204)
+  })
+
+  it("DELETE /api/contacts/[contactId] passes through a non-204 status from the backend", async () => {
+    mockFetchOnce(null, 404)
+    const req = {} as Request
+    const params = Promise.resolve({ contactId: "does-not-exist" })
+
+    const res = await DELETE(req, { params })
+
+    expect(res.status).toBe(404)
   })
 
   it("PUT /api/contacts/[contactId] forwards Bearer token", async () => {
