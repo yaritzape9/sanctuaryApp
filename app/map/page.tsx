@@ -1,6 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
+import { useSightingsSocket } from "@/app/hooks/useSightingsSocket"
 import { GoogleMap, useJsApiLoader, Marker, Circle, InfoWindow } from "@react-google-maps/api"
 import ReportModal from "@/components/ReportModal"
 import { useSession } from "next-auth/react"
@@ -117,7 +118,8 @@ export default function MapPage() {
   const { data: session } = useSession()
   const isLoggedIn = !!session?.user
   const { toasts, addToast, removeToast } = useToast()
-
+  const { connected: liveConnected } = useSightingsSocket(session?.backendToken, setSightings)
+  
   function requireAuth() {
     if (!isLoggedIn) {
       addToast("Sign in to add a report", "info")
@@ -278,6 +280,12 @@ export default function MapPage() {
               <span className="text-xs text-neutral-700 ml-auto">
                 {sightings.length} sighting{sightings.length !== 1 ? "s" : ""}
               </span>
+              {isLoggedIn && (
+                <span className="flex items-center gap-1.5 text-xs text-neutral-700">
+                  <span className={`w-1.5 h-1.5 rounded-full ${liveConnected ? "bg-green-500" : "bg-neutral-600"}`} />
+                  {liveConnected ? "Live" : "Reconnecting…"}
+                </span>
+              )}
             </div>
 
             {/* Banner only visible when modal is open */}
