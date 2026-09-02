@@ -4,12 +4,14 @@ import { vi, describe, it, expect, beforeEach, beforeAll } from "vitest"
 // Mock @stomp/stompjs's Client so we control connect/disconnect/subscribe
 // without ever opening a real socket. vi.hoisted lets these refs be used
 // inside vi.mock factories below (which run before imports).
-const { activateMock, deactivateMock, subscribeMock, clientConfigs, ClientMock } = vi.hoisted(() => {
+const { activateMock, deactivateMock, subscribeMock, clientConfigs, ClientMock, sockJSMock } = vi.hoisted(() => {
   const activateMock = vi.fn()
   const deactivateMock = vi.fn()
   const subscribeMock = vi.fn()
   const clientConfigs: any[] = []
-
+  const sockJSMock = vi.fn().mockImplementation(function () {
+    return {}
+  })
     const ClientMock = vi.fn().mockImplementation(function (config: any) {
     clientConfigs.push(config)
     return {
@@ -19,7 +21,7 @@ const { activateMock, deactivateMock, subscribeMock, clientConfigs, ClientMock }
     }
     })
 
-  return { activateMock, deactivateMock, subscribeMock, clientConfigs, ClientMock }
+  return { activateMock, deactivateMock, subscribeMock, clientConfigs, ClientMock, sockJSMock }
 })
 
 vi.mock("@stomp/stompjs", () => ({
@@ -29,7 +31,7 @@ vi.mock("@stomp/stompjs", () => ({
 // sockjs-client is only ever invoked inside webSocketFactory, which our
 // mocked Client never calls — but it must resolve cleanly on import.
 vi.mock("sockjs-client", () => ({
-  default: vi.fn().mockImplementation(() => ({})),
+  default: sockJSMock,
 }))
 
 // WS_BASE is read from process.env at module import time, so the env var
@@ -54,6 +56,7 @@ describe("useSightingsSocket", () => {
     deactivateMock.mockClear()
     subscribeMock.mockClear()
     ClientMock.mockClear()
+    sockJSMock.mockClear()
     clientConfigs.length = 0
   })
 
@@ -73,6 +76,15 @@ describe("useSightingsSocket", () => {
     expect(clientConfigs[0].connectHeaders).toEqual({ Authorization: "Bearer fake-jwt" })
     expect(clientConfigs[0].reconnectDelay).toBe(5000)
     expect(activateMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("builds the SockJS URL from WS_BASE via webSocketFactory", () => {
+    const setSightings = vi.fn()
+    renderHook(() => useSightingsSocket("fake-jwt", setSightings))
+
+    clientConfigs[0].webSocketFactory()
+
+    expect(sockJSMock).toHaveBeenCalledWith("http://localhost:8080/ws")
   })
 
   it("reports connected true after onConnect and false after onDisconnect", () => {
@@ -165,5 +177,22 @@ describe("useSightingsSocket", () => {
 
     expect(deactivateMock).toHaveBeenCalledTimes(1)
     expect(ClientMock).toHaveBeenCalledTimes(1) // no second client created
+  })
+
+  it("does not create a connection when WS_BASE is not set", async () => {
+    vi.resetModules()
+    vi.stubEnv("NEXT_PUBLIC_SANCTUARY_API_URL", "")
+
+    const { useSightingsSocket: useSightingsSocketNoBase } = await import("@/app/hooks/useSightingsSocket")
+
+    const setSightings = vi.fn()
+    renderHook(() => useSightingsSocketNoBase("fake-jwt", setSightings))
+
+    expect(ClientMock).not.toHaveBeenCalled()
+
+    // restore the shared module reference and env for any tests after this one
+    vi.resetModules()
+    vi.stubEnv("NEXT_PUBLIC_SANCTUARY_API_URL", "http://localhost:8080")
+    ;({ useSightingsSocket } = await import("@/app/hooks/useSightingsSocket"))
   })
 })
