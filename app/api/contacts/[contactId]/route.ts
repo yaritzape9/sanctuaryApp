@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth"
 import { NextResponse } from "next/server"
+import { errorResponse } from "@/lib/apiError"
 
 const BACKEND = process.env.BACKEND_URL ?? "http://localhost:8080"
 
@@ -26,8 +27,13 @@ export async function DELETE(
     if (res.status === 204) return new NextResponse(null, { status: 204 })
     return new NextResponse(null, { status: res.status })
   } catch (err) {
-    console.error("DELETE /api/contacts/[contactId] failed:", err)
-    return NextResponse.json({ error: "Failed to delete contact" }, { status: 502 })
+    return errorResponse(
+      session,
+      `DELETE /api/contacts/${contactId}`,
+      "Failed to delete contact",
+      502,
+      err instanceof Error ? err.message : String(err)
+    )
   }
 }
 
@@ -62,7 +68,12 @@ export async function PUT(
 
     return NextResponse.json(data, { status: res.status })
   } catch (err) {
-    console.error("PUT /api/contacts/[contactId] failed:", err)
-    return NextResponse.json({ error: "Failed to update contact" }, { status: 502 })
+    return errorResponse(
+      session,
+      `PUT /api/contacts/${contactId}`,
+      "Failed to update contact",
+      502,
+      err instanceof Error ? err.message : String(err)
+    )
   }
 }
