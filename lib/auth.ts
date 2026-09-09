@@ -1,6 +1,7 @@
 import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
 import Credentials from "next-auth/providers/credentials";
+import { decodeRole } from "./jwt";
 
 const API_URL = process.env.SANCTUARY_API_URL;
 
@@ -75,6 +76,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             if (data?.token && data?.userId) {
               token.sub = data.userId;
               token.backendToken = data.token;
+              token.role = decodeRole(data.token) ?? undefined;
             }
           } else {
             console.error("oauth-sync failed:", res.status);
@@ -88,6 +90,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.sub = user.id;
         if ("backendToken" in user && user.backendToken) {
           token.backendToken = user.backendToken as string;
+          token.role = decodeRole(user.backendToken as string) ?? undefined;
         }
       }
 
@@ -99,6 +102,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       }
       if (token.backendToken) {
         session.backendToken = token.backendToken as string;
+      }
+      if (token.role) {
+        session.user.role = token.role as string;
       }
       return session;
     },
