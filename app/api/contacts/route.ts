@@ -1,5 +1,6 @@
 import { auth } from "@/lib/auth"
 import { NextResponse } from "next/server"
+import { errorResponse } from "@/lib/apiError"
 
 const BACKEND = process.env.BACKEND_URL ?? "http://localhost:8080"
 
@@ -20,8 +21,13 @@ export async function GET() {
     const data = await res.json()
     return NextResponse.json(data, { status: res.status })
   } catch (err) {
-    console.error("GET /api/contacts failed:", err)
-    return NextResponse.json({ error: "Proxy error" }, { status: 500 })
+    return errorResponse(
+      session,
+      "GET /api/contacts",
+      "Proxy error",
+      500,
+      err instanceof Error ? err.message : String(err)
+    )
   }
 }
 
@@ -46,7 +52,12 @@ export async function POST(req: Request) {
     const data = await res.json()
     return NextResponse.json(data, { status: res.status })
   } catch (err) {
-    console.error("POST /api/contacts failed:", err)
-    return NextResponse.json({ error: "Proxy error" }, { status: 500 })
+    return errorResponse(
+      session,
+      "POST /api/contacts",
+      "Proxy error",
+      500,
+      err instanceof Error ? err.message : String(err)
+    )
   }
 }
