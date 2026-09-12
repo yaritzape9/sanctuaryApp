@@ -2,7 +2,7 @@ import { auth } from "@/lib/auth"
 import { NextResponse } from "next/server"
 import { errorResponse } from "@/lib/apiError"
 
-const BACKEND = process.env.BACKEND_URL ?? "http://localhost:8080"
+const API_URL = process.env.SANCTUARY_API_URL ?? "http://localhost:8080"
 
 export async function DELETE(
   _req: Request,
@@ -17,7 +17,7 @@ export async function DELETE(
 
   try {
     const res = await fetch(
-      `${BACKEND}/api/contacts/${contactId}?userId=${session.user.id}`,
+      `${API_URL}/api/contacts/${contactId}?userId=${session.user.id}`,
       {
         method: "DELETE",
         headers: { Authorization: `Bearer ${session.backendToken}` },
@@ -50,7 +50,7 @@ export async function PUT(
   const body = await req.json()
 
   try {
-    const res = await fetch(`${BACKEND}/api/contacts/${contactId}`, {
+    const res = await fetch(`${API_URL}/api/contacts/${contactId}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",

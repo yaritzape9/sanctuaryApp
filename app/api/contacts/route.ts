@@ -2,7 +2,7 @@ import { auth } from "@/lib/auth"
 import { NextResponse } from "next/server"
 import { errorResponse } from "@/lib/apiError"
 
-const BACKEND = process.env.BACKEND_URL ?? "http://localhost:8080"
+const API_URL = process.env.SANCTUARY_API_URL ?? "http://localhost:8080"
 
 export async function GET() {
   const session = await auth()
@@ -11,7 +11,7 @@ export async function GET() {
   }
 
   try {
-    const res = await fetch(`${BACKEND}/api/contacts/${session.user.id}`, {
+    const res = await fetch(`${API_URL}/api/contacts/${session.user.id}`, {
       cache: "no-store",
       headers: {
         Authorization: `Bearer ${session.backendToken}`,
@@ -40,7 +40,7 @@ export async function POST(req: Request) {
   const body = await req.json()
 
   try {
-    const res = await fetch(`${BACKEND}/api/contacts`, {
+    const res = await fetch(`${API_URL}/api/contacts`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
