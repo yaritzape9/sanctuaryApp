@@ -35,9 +35,7 @@ export default function Footer() {
               key={href}
               href={href}
               className={`transition-colors hover:text-white ${
-                pathname === href
-                  ? "text-white font-medium"
-                  : "text-neutral-400"
+                pathname === href ? "text-white font-medium" : "text-neutral-400"
               }`}
             >
               {label}
@@ -46,8 +44,8 @@ export default function Footer() {
         </nav>
 
         {/* Language switcher */}
-        <div className="flex flex-wrap justify-center items-center gap-2">
-          {languages.map(({ code, label }) => (
+        <div className="flex items-center gap-2 flex-wrap justify-center">
+          {languages.map(({ code, label, abbr }) => (
             <button
               key={code}
               onClick={() => setLang(code)}
@@ -58,7 +56,7 @@ export default function Footer() {
                   : "bg-white/10 hover:bg-white/20 text-neutral-300"
               }`}
             >
-              {code.toUpperCase()}
+              {abbr}
             </button>
           ))}
         </div>

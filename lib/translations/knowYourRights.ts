@@ -227,18 +227,18 @@ export const translations: Record<Lang, LangContent> = {
   },
 }
 
-export const languages: { code: Lang; label: string }[] = [
-  { code: "en", label: "English" },
-  { code: "es", label: "Español" },
-  { code: "zh", label: "中文" },
-  { code: "ar", label: "العربية" },
-  { code: "vi", label: "Tiếng Việt" },
-  { code: "fr", label: "Français" },
-  { code: "ht", label: "Kreyòl" },
-  { code: "pt", label: "Português" },
-  { code: "hi", label: "हिन्दी" },
-  { code: "ko", label: "한국어" },
-  { code: "tl", label: "Tagalog" },
-  { code: "ru", label: "Русский" },
-  { code: "pl", label: "Polski" },
+export const languages: { code: Lang; label: string; abbr: string }[] = [
+  { code: "en", label: "English",     abbr: "EN" },
+  { code: "es", label: "Español",     abbr: "ES" },
+  { code: "zh", label: "中文",         abbr: "中" },
+  { code: "ar", label: "العربية",     abbr: "ع" },
+  { code: "vi", label: "Tiếng Việt",  abbr: "VI" },
+  { code: "fr", label: "Français",    abbr: "FR" },
+  { code: "ht", label: "Kreyòl",      abbr: "KR" },
+  { code: "pt", label: "Português",   abbr: "PT" },
+  { code: "hi", label: "हिन्दी",       abbr: "हि" },
+  { code: "ko", label: "한국어",        abbr: "한" },
+  { code: "tl", label: "Tagalog",     abbr: "TL" },
+  { code: "ru", label: "Русский",     abbr: "РУ" },
+  { code: "pl", label: "Polski",      abbr: "PL" },
 ]

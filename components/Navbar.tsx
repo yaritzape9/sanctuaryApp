@@ -3,9 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useState, useEffect } from "react"
-
-// TODO: replace with real auth session check
-const isLoggedIn = false
+import { useSession, signOut } from "next-auth/react"
 
 const navLinks = [
   { label: "Home", href: "/" },
@@ -16,7 +14,8 @@ const navLinks = [
 export default function Navbar() {
   const pathname = usePathname()
   const [menuOpen, setMenuOpen] = useState(false)
-
+  const { data: session } = useSession()
+  const isLoggedIn = !!session?.user
   // Close menu on route change
   useEffect(() => {
     setMenuOpen(false)
@@ -65,7 +64,20 @@ export default function Navbar() {
           <div className="hidden md:flex items-center gap-2">
             {isLoggedIn ? (
               <>
-                <button className="px-4 py-1.5 rounded text-sm border border-sanctuary-border text-neutral-400 hover:border-white/20 hover:text-white transition-colors">
+                <Link
+                  href="/profile"
+                  className={`px-4 py-1.5 rounded text-sm transition-colors ${
+                    pathname === "/profile"
+                      ? "bg-white/10 text-white font-medium"
+                      : "text-neutral-400 hover:text-white hover:bg-white/5"
+                  }`}
+                >
+                  Profile
+                </Link>
+                <button
+                  onClick={() => signOut({ callbackUrl: "/" })}
+                  className="px-4 py-1.5 rounded text-sm border border-sanctuary-border text-neutral-400 hover:border-white/20 hover:text-white transition-colors"
+                >
                   Log out
                 </button>
                 <Link
@@ -153,7 +165,20 @@ export default function Navbar() {
                 >
                   🆘 Panic Button
                 </Link>
-                <button className="w-full py-3 rounded text-sm border border-sanctuary-border text-neutral-400 hover:border-white/20 hover:text-white transition-colors">
+                <Link
+                  href="/profile"
+                  className={`px-4 py-3 rounded text-lg transition-colors ${
+                    pathname === "/profile"
+                      ? "bg-white/10 text-white font-medium"
+                      : "text-neutral-400 hover:text-white hover:bg-white/5"
+                  }`}
+                >
+                  Profile
+                </Link>
+                <button
+                  onClick={() => signOut({ callbackUrl: "/" })}
+                  className="px-4 py-1.5 rounded text-sm border border-sanctuary-border text-neutral-400 hover:border-white/20 hover:text-white transition-colors"
+                >
                   Log out
                 </button>
               </>

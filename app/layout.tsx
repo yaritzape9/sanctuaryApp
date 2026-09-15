@@ -7,6 +7,8 @@ import PageTransition from "@/components/PageTransition";
 import { LanguageProvider } from "@/context/LanguageContext"
 
 import PanicShortcut from "@/components/PanicShortcut"
+import Providers from "@/components/Providers"
+
 
 const fraunces = Fraunces({
   subsets: ["latin"],
@@ -33,7 +35,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" data-scroll-behavior="smooth" className={`${fraunces.variable} ${dmSans.variable}`}>
       <body className="grain bg-sanctuary-black font-body text-neutral-300 antialiased">
-        <LanguageProvider>
+        <Providers>
           <Navbar />
           <PanicShortcut />
           <PageTransition>
@@ -41,8 +43,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </PageTransition>
           <Footer />
           <BackToTop />
-        </LanguageProvider>
+        </Providers>
       </body>
     </html>
-  );
+  )
 }
