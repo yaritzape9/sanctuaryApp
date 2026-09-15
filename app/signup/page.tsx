@@ -4,13 +4,8 @@ import Link from "next/link"
 import { signIn } from "next-auth/react"
 import ToastContainer from "@/components/Toast"
 import { useToast } from "@/hooks/useToast"
-
-const languages = [
-  { value: "en", label: "English" },
-  { value: "es", label: "Español" },
-  { value: "zh", label: "中文" },
-  { value: "ar", label: "العربية" },
-]
+import { useLanguage } from "@/context/LanguageContext"
+import { languages } from "@/lib/translations/knowYourRights"
 
 const inputClass = `
   w-full border border-sanctuary-border bg-sanctuary-surface rounded
@@ -21,12 +16,13 @@ const inputClass = `
 const labelClass = "section-label block mb-2"
 
 export default function SignupPage() {
+  const { lang } = useLanguage()
   const { toasts, addToast, removeToast } = useToast()
 
   function handleSubmit(e: React.SubmitEvent) {
     e.preventDefault()
-    // TODO: connect to Spring Boot auth API and on success:
-        e.preventDefault()
+    // TODO: connect to Spring Boot auth API
+    // on success: addToast("Account created successfully!", "success")
     // on error:
     addToast("Something went wrong. Please try again.", "error")
   }
@@ -58,7 +54,7 @@ export default function SignupPage() {
             </div>
             <div className="flex items-start gap-3">
               <span className="text-sanctuary-accent mt-0.5">→</span>
-              <p className="text-sm text-neutral-400">Know your rights in 4 languages</p>
+              <p className="text-sm text-neutral-400">Know your rights in 13 languages</p>
             </div>
           </div>
         </div>
@@ -142,10 +138,10 @@ export default function SignupPage() {
 
             <div>
               <label className={labelClass}>Preferred language</label>
-              <select className={inputClass}>
-                {languages.map((lang) => (
-                  <option key={lang.value} value={lang.value}>
-                    {lang.label}
+              <select defaultValue={lang} className={inputClass}>
+                {languages.map(({ code, label }) => (
+                  <option key={code} value={code}>
+                    {label}
                   </option>
                 ))}
               </select>

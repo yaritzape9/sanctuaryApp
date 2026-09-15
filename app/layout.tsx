@@ -4,6 +4,8 @@ import Footer from "@/components/Footer";
 import BackToTop from "@/components/BackToTopButton";
 import Navbar from "@/components/Navbar";
 import PageTransition from "@/components/PageTransition";
+import { LanguageProvider } from "@/context/LanguageContext"
+
 import PanicShortcut from "@/components/PanicShortcut"
 import Providers from "@/components/Providers"
 
