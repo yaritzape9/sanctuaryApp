@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useLanguage } from "@/components/LanguageContext";
+import { useLanguage } from "@/context/LanguageContext";
 import { languages } from "@/lib/translations/knowYourRights";
 
 const footerLinks = [
@@ -13,7 +13,7 @@ const footerLinks = [
 ];
 
 export default function Footer() {
-  const { lang, setLang } = useLanguage();
+  const { lang, setLang } = useLanguage()
   const pathname = usePathname();
 
   return (
