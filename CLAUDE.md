@@ -31,6 +31,12 @@ yp-[featureName]
 ## Current status (update in the same commit as each PR)
 - Completed: panic UI, contacts UI, sightings proxy routes, sightings UI
   (live map data, status pill only, no confirmation counts shown)
+- Contacts API (yp-contactsDropUserId, pairs with backend
+  yp-authMatrixContactsFix): backend reads the user from the JWT only.
+  GET /api/contacts (no /{userId}); proxies never send userId in the URL,
+  query or body, and strip any userId the client sends. Backend returns
+  401 (not 403) for missing/invalid tokens.
+- Full roadmap lives in the "Sanctuary — Status & Backlog" Claude Doc
 - In progress: yp-authCredentials (bridge NextAuth credentials login to
   backend JWT), then yp-authOAuth (Google sync), then yp-protectedRoutes
   (middleware; /map stays public with gated report/pin actions; /panic and

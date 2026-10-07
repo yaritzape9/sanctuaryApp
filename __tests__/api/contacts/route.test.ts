@@ -22,7 +22,7 @@ describe("GET /api/contacts", () => {
     expect(res.status).toBe(401);
   });
 
-  it("proxies to the backend with the session's userId and token", async () => {
+  it("proxies to the backend with only the token, never a userId in the URL", async () => {
     mockAuth.mockResolvedValue(mockSession());
     mockFetch.mockResolvedValueOnce({
       ok: true,
@@ -34,7 +34,7 @@ describe("GET /api/contacts", () => {
     const data = await res.json();
 
     expect(mockFetch).toHaveBeenCalledWith(
-      expect.stringContaining("/api/contacts/user-1"),
+      expect.stringMatching(/\/api\/contacts$/),
       expect.objectContaining({
         headers: { Authorization: "Bearer backend-jwt-token" },
       })
@@ -75,7 +75,7 @@ describe("POST /api/contacts", () => {
     expect(res.status).toBe(401);
   });
 
-  it("injects the session userId into the outgoing payload", async () => {
+  it("never forwards a userId, even when the client sends one", async () => {
     mockAuth.mockResolvedValue(mockSession());
     mockFetch.mockResolvedValueOnce({
       ok: true,
@@ -85,12 +85,12 @@ describe("POST /api/contacts", () => {
 
     const req = new Request("http://localhost/api/contacts", {
       method: "POST",
-      body: JSON.stringify({ name: "Jane" }),
+      body: JSON.stringify({ name: "Jane", userId: "victim-user" }),
     });
     await POST(req);
 
     const [, init] = mockFetch.mock.calls[0];
-    expect(JSON.parse(init.body as string)).toEqual({ name: "Jane", userId: "user-1" });
+    expect(JSON.parse(init.body as string)).toEqual({ name: "Jane" });
   });
 
   it("returns a generic proxy error on fetch failure", async () => {

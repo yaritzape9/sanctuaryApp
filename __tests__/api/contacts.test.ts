@@ -37,7 +37,7 @@ describe("contacts proxy routes — Authorization header", () => {
     await GET()
 
     expect(global.fetch).toHaveBeenCalledWith(
-      expect.stringContaining(`/api/contacts/${SESSION.user.id}`),
+      expect.stringMatching(/\/api\/contacts$/),
       expect.objectContaining({
         headers: expect.objectContaining({
           Authorization: `Bearer ${SESSION.backendToken}`,

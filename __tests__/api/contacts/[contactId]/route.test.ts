@@ -37,7 +37,7 @@ describe("DELETE /api/contacts/[contactId]", () => {
     const res = await DELETE(new Request("http://localhost"), { params });
 
     expect(mockFetch).toHaveBeenCalledWith(
-      expect.stringContaining("/api/contacts/contact-1?userId=user-1"),
+      expect.stringMatching(/\/api\/contacts\/contact-1$/),
       expect.objectContaining({
         method: "DELETE",
         headers: { Authorization: "Bearer backend-jwt-token" },
@@ -90,7 +90,7 @@ describe("PUT /api/contacts/[contactId]", () => {
     expect(res.status).toBe(401);
   });
 
-  it("injects the session userId into the outgoing payload", async () => {
+  it("never forwards a userId, even when the client sends one", async () => {
     mockAuth.mockResolvedValue(mockSession());
     mockFetch.mockResolvedValueOnce({
       ok: true,
@@ -98,10 +98,10 @@ describe("PUT /api/contacts/[contactId]", () => {
       json: async () => ({ id: "contact-1", name: "Jane" }),
     });
 
-    await PUT(putRequest({ name: "Jane" }), { params });
+    await PUT(putRequest({ name: "Jane", userId: "victim-user" }), { params });
 
     const [, init] = mockFetch.mock.calls[0];
-    expect(JSON.parse(init.body as string)).toEqual({ name: "Jane", userId: "user-1" });
+    expect(JSON.parse(init.body as string)).toEqual({ name: "Jane" });
   });
 
   it("falls back to null data when the backend returns a non-JSON body", async () => {

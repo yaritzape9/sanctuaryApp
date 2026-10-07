@@ -16,13 +16,10 @@ export async function DELETE(
   const { contactId } = await params
 
   try {
-    const res = await fetch(
-      `${API_URL}/api/contacts/${contactId}?userId=${session.user.id}`,
-      {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${session.backendToken}` },
-      }
-    )
+    const res = await fetch(`${API_URL}/api/contacts/${contactId}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${session.backendToken}` },
+    })
 
     if (res.status === 204) return new NextResponse(null, { status: 204 })
     return new NextResponse(null, { status: res.status })
@@ -47,7 +44,9 @@ export async function PUT(
   }
 
   const { contactId } = await params
+  // Drop any client-supplied userId; the backend takes identity from the JWT
   const body = await req.json()
+  delete body.userId
 
   try {
     const res = await fetch(`${API_URL}/api/contacts/${contactId}`, {
@@ -56,7 +55,7 @@ export async function PUT(
         "Content-Type": "application/json",
         Authorization: `Bearer ${session.backendToken}`,
       },
-      body: JSON.stringify({ ...body, userId: session.user.id }),
+      body: JSON.stringify(body),
     })
 
     let data = null
