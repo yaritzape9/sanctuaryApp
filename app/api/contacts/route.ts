@@ -11,7 +11,8 @@ export async function GET() {
   }
 
   try {
-    const res = await fetch(`${API_URL}/api/contacts/${session.user.id}`, {
+    // The backend reads the user from the JWT, so no userId goes in the URL
+    const res = await fetch(`${API_URL}/api/contacts`, {
       cache: "no-store",
       headers: {
         Authorization: `Bearer ${session.backendToken}`,
@@ -37,7 +38,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
+  // Drop any client-supplied userId; the backend takes identity from the JWT
   const body = await req.json()
+  delete body.userId
 
   try {
     const res = await fetch(`${API_URL}/api/contacts`, {
@@ -46,7 +49,7 @@ export async function POST(req: Request) {
         "Content-Type": "application/json",
         Authorization: `Bearer ${session.backendToken}`,
       },
-      body: JSON.stringify({ ...body, userId: session.user.id }),
+      body: JSON.stringify(body),
     })
 
     const data = await res.json()
