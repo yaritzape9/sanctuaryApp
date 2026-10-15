@@ -22,7 +22,7 @@ describe("authConfig.callbacks.jwt", () => {
     });
 
     const token = {} as JWT;
-    const account = { provider: "google" } as Account;
+    const account = { provider: "google", id_token: "google-id-token" } as Account;
     const profile = {
       email: "test@example.com",
       name: "Test User",
@@ -71,7 +71,7 @@ describe("authConfig.callbacks.jwt", () => {
     });
 
     const token = {} as JWT;
-    const account = { provider: "google" } as Account;
+    const account = { provider: "google", id_token: "google-id-token" } as Account;
     const profile = {
       email: "test@example.com",
       name: "Test User",
@@ -94,5 +94,52 @@ describe("authConfig.callbacks.jwt", () => {
 
     expect(result.sub).toBe("backend-uuid-789");
     expect(result.sub).not.toBe("test@example.com");
+  });
+
+  it("sends only Google's ID token to oauth-sync, never profile fields", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ token: "backend-jwt", userId: "backend-uuid-123" }),
+    });
+
+    await authConfig.callbacks.jwt({
+      token: {} as JWT,
+      account: { provider: "google", id_token: "google-id-token" } as Account,
+      profile: { email: "test@example.com", name: "Test", sub: "google-sub-id" } as Profile,
+      user: undefined,
+    });
+
+    const [url, init] = mockFetch.mock.calls[0];
+    expect(url).toContain("/api/auth/oauth-sync");
+    expect(JSON.parse(init.body as string)).toEqual({ idToken: "google-id-token" });
+  });
+
+  it("skips oauth-sync and sets no backend token when Google returns no id_token", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const result = await authConfig.callbacks.jwt({
+      token: {} as JWT,
+      account: { provider: "google" } as Account,
+      profile: { email: "test@example.com", sub: "google-sub-id" } as Profile,
+      user: undefined,
+    });
+
+    expect(mockFetch).not.toHaveBeenCalled();
+    expect(result.backendToken).toBeUndefined();
+  });
+
+  it("sets no backend token when the backend refuses the sign-in (409 existing account)", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    mockFetch.mockResolvedValueOnce({ ok: false, status: 409 });
+
+    const result = await authConfig.callbacks.jwt({
+      token: {} as JWT,
+      account: { provider: "google", id_token: "google-id-token" } as Account,
+      profile: undefined,
+      user: undefined,
+    });
+
+    expect(result.backendToken).toBeUndefined();
+    expect(result.sub).toBeUndefined();
   });
 });

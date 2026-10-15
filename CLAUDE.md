@@ -36,6 +36,10 @@ yp-[featureName]
   GET /api/contacts (no /{userId}); proxies never send userId in the URL,
   query or body, and strip any userId the client sends. Backend returns
   401 (not 403) for missing/invalid tokens.
+- Google sign-in (yp-oauthSyncVerify): jwt callback sends only
+  account.id_token to /api/auth/oauth-sync, never profile fields. A 401/409
+  leaves the session without a backendToken (friendly 409 message on
+  /login is a follow-up)
 - Full roadmap lives in the "Sanctuary — Status & Backlog" Claude Doc
 - In progress: yp-authCredentials (bridge NextAuth credentials login to
   backend JWT), then yp-authOAuth (Google sync), then yp-protectedRoutes
