@@ -62,23 +62,24 @@ export const authConfig = {
       token,
       user,
       account,
-      profile,
     }: {
       token: JWT;
       user?: User;
       account?: Account | null;
       profile?: Profile;
     }) {
-      if (account?.provider === "google" && profile) {
+      if (account?.provider === "google") {
+        // Send Google's signed ID token; the backend verifies it and reads the
+        // email and Google ID from inside it. Profile fields are never sent.
+        if (!account.id_token) {
+          console.error("oauth-sync skipped: Google returned no id_token");
+          return token;
+        }
         try {
           const res = await fetch(`${API_URL}/api/auth/oauth-sync`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              email: profile.email,
-              name: profile.name,
-              googleId: profile.sub,
-            }),
+            body: JSON.stringify({ idToken: account.id_token }),
           });
 
           if (res.ok) {
