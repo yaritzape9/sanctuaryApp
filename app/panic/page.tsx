@@ -3,7 +3,7 @@ import { useSession } from "next-auth/react"
 
 import { useState } from "react"
 import Link from "next/link"
-import { useToast } from "@/hooks/useToast"
+import { useToast } from "@/context/ToastContext"
 
 type Status = "safe" | "triggered"
 
@@ -50,7 +50,7 @@ async function handleTrigger() {
 
   if (sent) {
     setStatus("triggered")
-    addToast("Alert sent to your emergency contacts.", "error")
+    addToast("Alert sent to your emergency contacts.", "success")
   } else {
     addToast("Could not send alert after 3 tries. Text your emergency contact directly.", "error")
   }

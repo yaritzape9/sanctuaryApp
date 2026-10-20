@@ -2,8 +2,7 @@
 
 import Link from "next/link"
 import { signIn } from "next-auth/react"
-import ToastContainer from "@/components/Toast"
-import { useToast } from "@/hooks/useToast"
+import { useToast } from "@/context/ToastContext"
 import { useLanguage } from "@/context/LanguageContext"
 import { languages } from "@/lib/translations/knowYourRights"
 
@@ -17,7 +16,7 @@ const labelClass = "section-label block mb-2"
 
 export default function SignupPage() {
   const { lang } = useLanguage()
-  const { toasts, addToast, removeToast } = useToast()
+  const { addToast } = useToast()
 
   function handleSubmit(e: React.SubmitEvent) {
     e.preventDefault()
@@ -165,7 +164,6 @@ export default function SignupPage() {
 
       </div>
       </main>
-      <ToastContainer toasts={toasts} removeToast={removeToast} />
     </>
   )
 }

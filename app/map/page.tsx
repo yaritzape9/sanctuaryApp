@@ -5,8 +5,7 @@ import { useSightingsSocket } from "@/app/hooks/useSightingsSocket"
 import { GoogleMap, useJsApiLoader, Marker, Circle, InfoWindow } from "@react-google-maps/api"
 import ReportModal from "@/components/ReportModal"
 import { useSession } from "next-auth/react"
-import { useToast } from "@/hooks/useToast"
-import ToastContainer from "@/components/Toast"
+import { useToast } from "@/context/ToastContext"
 
 const mapContainerStyle = { width: "100%", height: "100%" }
 const SF_CENTER = { lat: 37.7749, lng: -122.4194 }
@@ -117,7 +116,7 @@ export default function MapPage() {
   const [locatingUser, setLocatingUser] = useState(false)
   const { data: session } = useSession()
   const isLoggedIn = !!session?.user
-  const { toasts, addToast, removeToast } = useToast()
+  const { addToast } = useToast()
   const { connected: liveConnected } = useSightingsSocket(session?.backendToken, setSightings)
   
   function requireAuth() {
@@ -440,7 +439,6 @@ export default function MapPage() {
         onUseMyLocation={handleUseMyLocation}
         locatingUser={locatingUser}
       />
-      <ToastContainer toasts={toasts} removeToast={removeToast} />
     </main>
   )
 }
