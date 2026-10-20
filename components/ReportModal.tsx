@@ -1,8 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useToast } from "@/hooks/useToast"
-import ToastContainer from "@/components/Toast"
+import { useToast } from "@/context/ToastContext"
 
 interface ReportModalProps {
   isOpen: boolean
@@ -29,7 +28,7 @@ export default function ReportModal({
   onUseMyLocation,
   locatingUser,
 }: ReportModalProps) {
-  const { toasts, addToast, removeToast } = useToast()
+  const { addToast } = useToast()
   const [location, setLocation] = useState("")
   const [description, setDescription] = useState("")
   const [submitting, setSubmitting] = useState(false)
@@ -197,7 +196,6 @@ export default function ReportModal({
         </div>
       </div>
 
-      <ToastContainer toasts={toasts} removeToast={removeToast} />
     </>
   )
 }

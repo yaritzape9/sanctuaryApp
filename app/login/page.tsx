@@ -4,8 +4,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { signIn } from "next-auth/react"
-import ToastContainer from "@/components/Toast"
-import { useToast } from "@/hooks/useToast"
+import { useToast } from "@/context/ToastContext"
 
 const inputClass = `
   w-full border border-sanctuary-border bg-sanctuary-surface rounded
@@ -16,7 +15,7 @@ const inputClass = `
 const labelClass = "section-label block mb-2"
 
 export default function LoginPage() {
-  const { toasts, addToast, removeToast } = useToast()
+  const { addToast } = useToast()
   const router = useRouter()
   const [submitting, setSubmitting] = useState(false)
 
@@ -150,7 +149,6 @@ export default function LoginPage() {
 
       </div>
       </main>
-      <ToastContainer toasts={toasts} removeToast={removeToast} />
     </>
   )
 }

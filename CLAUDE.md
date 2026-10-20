@@ -14,7 +14,7 @@ Next.js 15 App Router, TypeScript, Tailwind CSS v4, NextAuth.js v5
 
 ## Key components
 Navbar, Footer (language switcher), BackToTop, Spinner, Skeleton,
-Toast/useToast, PageTransition, PanicShortcut, ReportModal
+Toast, ToastProvider, PageTransition, PanicShortcut, ReportModal
 
 ## Conventions
 - LanguageContext lives at components/LanguageContext.tsx (not context/)
@@ -22,6 +22,9 @@ Toast/useToast, PageTransition, PanicShortcut, ReportModal
 - NextAuth v5 needs an explicit `callbacks` block to pipe token.sub into
   session.user.id
 - Next.js 15 dynamic route `params` must be awaited as a Promise
+- Toasts: `useToast()` from context/ToastContext.tsx returns `{ addToast }`.
+  ToastProvider (mounted once in components/Providers.tsx) renders the only
+  ToastContainer. Never render ToastContainer in a page or component
 - .env.local (gitignored): SANCTUARY_API_URL, plus dev stub
   SANCTUARY_DEV_JWT / SANCTUARY_DEV_USER_ID (being phased out via yp-auth* PRs)
 
@@ -40,6 +43,9 @@ yp-[featureName]
   account.id_token to /api/auth/oauth-sync, never profile fields. A 401/409
   leaves the session without a backendToken (friendly 409 message on
   /login is a follow-up)
+- Toasts (yp-globalToaster): one app-wide ToastProvider replaced the
+  per-component hooks/useToast, so panic/profile toasts now show and toasts
+  survive modal close and navigation
 - Full roadmap lives in the "Sanctuary — Status & Backlog" Claude Doc
 - In progress: yp-authCredentials (bridge NextAuth credentials login to
   backend JWT), then yp-authOAuth (Google sync), then yp-protectedRoutes
