@@ -4,20 +4,24 @@ import { useSession } from "next-auth/react"
 import { useState } from "react"
 import Link from "next/link"
 import { useToast } from "@/context/ToastContext"
+import { fetchWithRetry } from "@/lib/fetchWithRetry"
 
 type Status = "safe" | "triggered"
+
+const SESSION_EXPIRED = "Your session expired. Log in again, then try again."
 
 export default function PanicPage() {
   const [status, setStatus] = useState<Status>("safe")
   const { addToast } = useToast()
-  const { data: session } = useSession()
-
+  // Identity comes from the backend JWT, so the page only needs to know
+  // whether someone is logged in, never who
+  const { status: sessionStatus } = useSession()
 
 async function handleTrigger() {
-  // if (!session?.user?.email) {
-  //   addToast("Please log in before triggering an alert.", "error")
-  //   return
-  // }
+  if (sessionStatus !== "authenticated") {
+    addToast("Please log in before triggering an alert.", "error")
+    return
+  }
 
   let lat: number | undefined
   let lng: number | undefined
@@ -30,43 +34,37 @@ async function handleTrigger() {
     lng = pos.coords.longitude
   } catch { /* proceed without location */ }
 
-  const MAX_RETRIES = 3
-  let attempt = 0
-  let sent = false
+  let res: Response | undefined
+  try {
+    res = await fetchWithRetry("/api/panic/trigger", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ lat, lng }),
+    })
+  } catch { /* every try failed to connect */ }
 
-  while (attempt < MAX_RETRIES && !sent) {
-    try {
-      const res = await fetch("/api/panic/trigger", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: session?.user?.email, lat, lng }),
-      })
-      if (!res.ok) throw new Error()
-      sent = true
-    } catch {
-      attempt++
-    }
-  }
-
-  if (sent) {
+  if (res?.ok) {
     setStatus("triggered")
     addToast("Alert sent to your emergency contacts.", "success")
+  } else if (res?.status === 401) {
+    addToast(SESSION_EXPIRED, "error")
   } else {
-    addToast("Could not send alert after 3 tries. Text your emergency contact directly.", "error")
+    addToast("Could not send alert. Text your emergency contact directly.", "error")
   }
 }
 
 async function handleReset() {
+  let res: Response | undefined
   try {
-    const res = await fetch("/api/panic/safe", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ userId: session?.user?.email }),
-    })
-    if (!res.ok) throw new Error()
+    res = await fetchWithRetry("/api/panic/safe", { method: "POST" })
+  } catch { /* every try failed to connect */ }
+
+  if (res?.ok) {
     setStatus("safe")
     addToast("Glad you're safe.", "success")
-  } catch {
+  } else if (res?.status === 401) {
+    addToast(SESSION_EXPIRED, "error")
+  } else {
     addToast("Could not send safe status. Try again.", "error")
   }
 }
@@ -98,7 +96,8 @@ async function handleReset() {
               {/* Panic button */}
               <button
                 onClick={handleTrigger}
-                className="relative w-48 h-48 rounded-full bg-red-500 hover:bg-red-600 active:scale-95 transition-all duration-150 shadow-lg shadow-red-500/30 flex items-center justify-center flex-col gap-2 group"
+                disabled={sessionStatus === "loading"}
+                className="relative w-48 h-48 rounded-full bg-red-500 hover:bg-red-600 active:scale-95 transition-all duration-150 shadow-lg shadow-red-500/30 flex items-center justify-center flex-col gap-2 group disabled:opacity-50 disabled:cursor-wait"
               >
                 <span className="text-4xl">🆘</span>
                 <span className="text-white font-semibold text-sm tracking-wide uppercase">

@@ -11,7 +11,7 @@ const mockAuth = auth as unknown as Mock<() => Promise<Session | null>>;
 const mockFetch = vi.fn();
 global.fetch = mockFetch as unknown as typeof fetch;
 
-function triggerRequest(body: unknown = { latitude: 1, longitude: 2 }) {
+function triggerRequest(body: unknown = { lat: 1, lng: 2 }) {
   return new Request("http://localhost", {
     method: "POST",
     body: JSON.stringify(body),
@@ -30,16 +30,36 @@ describe("POST /api/panic/trigger", () => {
     expect(res.status).toBe(401);
   });
 
-  it("forwards the request body to the backend and returns its message", async () => {
+  it("forwards lat and lng to the backend and returns its message", async () => {
     mockAuth.mockResolvedValue(mockSession());
     mockFetch.mockResolvedValueOnce({ ok: true, status: 200, text: async () => "Alert sent" });
 
-    const res = await POST(triggerRequest({ latitude: 10, longitude: 20 }));
+    const res = await POST(triggerRequest({ lat: 10, lng: 20 }));
     const body = await res.json();
 
     const [, init] = mockFetch.mock.calls[0];
-    expect(JSON.parse(init.body as string)).toEqual({ latitude: 10, longitude: 20 });
+    expect(JSON.parse(init.body as string)).toEqual({ lat: 10, lng: 20 });
     expect(body).toEqual({ message: "Alert sent" });
+  });
+
+  it("drops userId, email and any other field the client sends", async () => {
+    mockAuth.mockResolvedValue(mockSession());
+    mockFetch.mockResolvedValueOnce({ ok: true, status: 200, text: async () => "Alert sent" });
+
+    await POST(triggerRequest({ lat: 10, lng: 20, userId: "someone-else", email: "a@x.com", role: "ADMIN" }));
+
+    const [, init] = mockFetch.mock.calls[0];
+    expect(JSON.parse(init.body as string)).toEqual({ lat: 10, lng: 20 });
+  });
+
+  it("leaves out coordinates that aren't finite numbers", async () => {
+    mockAuth.mockResolvedValue(mockSession());
+    mockFetch.mockResolvedValueOnce({ ok: true, status: 200, text: async () => "Alert sent" });
+
+    await POST(triggerRequest({ lat: "40.7", lng: null }));
+
+    const [, init] = mockFetch.mock.calls[0];
+    expect(JSON.parse(init.body as string)).toEqual({});
   });
 
   it("surfaces a non-DEV-safe error when the backend responds with a non-2xx status", async () => {
