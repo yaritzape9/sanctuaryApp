@@ -46,6 +46,11 @@ yp-[featureName]
 - Toasts (yp-globalToaster): one app-wide ToastProvider replaced the
   per-component hooks/useToast, so panic/profile toasts now show and toasts
   survive modal close and navigation
+- Panic page (yp-panicPageHardening): requires a logged-in session, sends
+  only { lat, lng } (never userId/email), and uses lib/fetchWithRetry.ts.
+  The trigger proxy forwards only finite lat/lng. fetchWithRetry retries
+  network errors, 5xx, 408 and 429 with backoff (500 ms, 1 s); any other
+  4xx returns at once. Reuse it for other user-triggered fetches
 - Full roadmap lives in the "Sanctuary — Status & Backlog" Claude Doc
 - In progress: yp-authCredentials (bridge NextAuth credentials login to
   backend JWT), then yp-authOAuth (Google sync), then yp-protectedRoutes
