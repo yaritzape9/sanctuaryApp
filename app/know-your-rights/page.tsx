@@ -1,7 +1,7 @@
 "use client"
 
 import { translations, languages, type Lang } from "@/lib/translations/knowYourRights"
-import { useLanguage } from "@/components/LanguageContext"
+import { useLanguage } from "@/context/LanguageContext"
 
 export default function KnowYourRightsPage() {
   const { lang, setLang } = useLanguage()

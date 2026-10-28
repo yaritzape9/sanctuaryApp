@@ -17,7 +17,9 @@ Navbar, Footer (language switcher), BackToTop, Spinner, Skeleton,
 Toast, ToastProvider, PageTransition, PanicShortcut, ReportModal
 
 ## Conventions
-- LanguageContext lives at components/LanguageContext.tsx (not context/)
+- LanguageContext lives at context/LanguageContext.tsx, like the other
+  contexts. LanguageProvider is mounted once in components/Providers.tsx;
+  useLanguage() throws outside it
 - Lang type + languages array exported from lib/translations/knowYourRights.ts
 - NextAuth v5 needs an explicit `callbacks` block to pipe token.sub into
   session.user.id
@@ -51,6 +53,9 @@ yp-[featureName]
   The trigger proxy forwards only finite lat/lng. fetchWithRetry retries
   network errors, 5xx, 408 and 429 with backoff (500 ms, 1 s); any other
   4xx returns at once. Reuse it for other user-triggered fetches
+- Language (yp-languageProviderMount): one LanguageContext, provider mounted
+  app-wide, so the Footer switcher and the Know Your Rights picker share
+  state. The choice is not persisted between visits (decided in 5.4)
 - Full roadmap lives in the "Sanctuary — Status & Backlog" Claude Doc
 - In progress: yp-authCredentials (bridge NextAuth credentials login to
   backend JWT), then yp-authOAuth (Google sync), then yp-protectedRoutes
