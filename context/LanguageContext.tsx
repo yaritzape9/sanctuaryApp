@@ -8,10 +8,9 @@ interface LanguageContextType {
   setLang: (lang: Lang) => void
 }
 
-const LanguageContext = createContext<LanguageContextType>({
-  lang: "en",
-  setLang: () => {},
-})
+// No default value: without a provider, setLang used to be a silent no-op,
+// which is how the language switcher stayed broken unnoticed
+const LanguageContext = createContext<LanguageContextType | null>(null)
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
   const [lang, setLang] = useState<Lang>("en")
@@ -24,5 +23,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
 }
 
 export function useLanguage() {
-  return useContext(LanguageContext)
+  const ctx = useContext(LanguageContext)
+  if (!ctx) throw new Error("useLanguage must be used inside <LanguageProvider>")
+  return ctx
 }
