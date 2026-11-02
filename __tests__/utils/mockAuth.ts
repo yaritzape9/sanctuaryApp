@@ -50,7 +50,7 @@ export const unauthenticatedSession = {
   update,
 } as unknown as UseSessionResult;
 
-// Session still resolving (the window yp-devErrorSessionBuffer will fix).
+// Session still resolving: DevErrorContext holds errors until it resolves.
 export const loadingSession = {
   data: undefined,
   status: "loading",

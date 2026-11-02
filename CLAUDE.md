@@ -56,6 +56,11 @@ yp-[featureName]
 - Language (yp-languageProviderMount): one LanguageContext, provider mounted
   app-wide, so the Footer switcher and the Know Your Rights picker share
   state. The choice is not persisted between visits (decided in 5.4)
+- DEV errors (yp-devErrorSessionBuffer): reportError keeps the first error
+  reported while the session loads in a ref (never state). Once the role is
+  known, a DEV sees it and everyone else has it discarded. reportError is
+  stable and reads the live session, so fetches started on page load still
+  report correctly
 - Full roadmap lives in the "Sanctuary — Status & Backlog" Claude Doc
 - In progress: yp-authCredentials (bridge NextAuth credentials login to
   backend JWT), then yp-authOAuth (Google sync), then yp-protectedRoutes
