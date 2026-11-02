@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react"
@@ -31,26 +32,48 @@ const DevErrorContext = createContext<DevErrorContextType>({
 })
 
 export function DevErrorProvider({ children }: { children: ReactNode }) {
-  const { data: session } = useSession()
+  const { data: session, status } = useSession()
   const isDev = session?.user?.role === "DEV"
+  const isLoading = status === "loading"
   const [error, setError] = useState<DevError | null>(null)
 
-  // If the user logs out or stops being a DEV, drop any stored error
+  // First error reported before the role is known. Kept in a ref, not state,
+  // so it never renders and is thrown away unless the session turns out DEV
+  const pendingRef = useRef<DevError | null>(null)
+
+  // Live session values for reportError. Fetches started while the session
+  // was loading still hold the reportError from that render, so it can't
+  // read isDev from its closure
+  const sessionRef = useRef({ isDev, isLoading })
+
   useEffect(() => {
-    if (!isDev) setError(null)
-  }, [isDev])
+    sessionRef.current = { isDev, isLoading }
+    if (isLoading) return
+
+    // Session resolved: show the held error to a DEV, discard it otherwise
+    const pending = pendingRef.current
+    pendingRef.current = null
+    if (!isDev) {
+      // Also covers logging out or stopping being a DEV
+      setError(null)
+    } else if (pending) {
+      setError((prev) => prev ?? pending)
+    }
+  }, [isDev, isLoading])
 
   // No-op for non-DEV users, so error data never enters React state
-  const reportError = useCallback(
-    (endpoint: string, message: string) => {
-      if (!isDev) return
+  const reportError = useCallback((endpoint: string, message: string) => {
+    const { isDev, isLoading } = sessionRef.current
+    if (isDev) {
       setError({ endpoint, message })
-    },
-    [isDev]
-  )
+    } else if (isLoading && !pendingRef.current) {
+      pendingRef.current = { endpoint, message }
+    }
+  }, [])
 
   // Only clears if the success came from the endpoint that is currently failing
   const clearError = useCallback((endpoint: string) => {
+    if (pendingRef.current?.endpoint === endpoint) pendingRef.current = null
     setError((prev) => (prev?.endpoint === endpoint ? null : prev))
   }, [])
 
