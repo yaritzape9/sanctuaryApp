@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { useSession } from "next-auth/react"
 import { useToast } from "@/context/ToastContext"
+import { useDevFetch } from "@/app/hooks/useDevFetch"
 
 const languages = [
   { value: "en", label: "English" },
@@ -45,6 +46,7 @@ export default function ProfilePage() {
   const [savingContacts, setSavingContacts] = useState(false)
   const [editingInfo, setEditingInfo] = useState(false)
   const { addToast } = useToast()
+  const devFetch = useDevFetch()
 
   // Redirect if not logged in
   useEffect(() => {
@@ -57,14 +59,17 @@ export default function ProfilePage() {
   useEffect(() => {
     if (!session?.user) return
 
-    fetch("/api/contacts")
-      .then((r) => r.json())
+    devFetch("/api/contacts")
+      .then((r) => {
+        if (!r.ok) throw new Error()
+        return r.json()
+      })
       .then((data: { id: string; name: string; phone: string; relationship: string }[]) => {
         setContacts(data.map((c) => ({ ...c, _saved: true })))
       })
       .catch(() => addToast("Failed to load contacts.", "error"))
       .finally(() => setLoadingContacts(false))
-  }, [session])
+  }, [session, devFetch])
 
   function addContactRow() {
     if (contacts.length >= 5) return
@@ -90,7 +95,7 @@ export default function ProfilePage() {
     }
 
     try {
-      const res = await fetch(`/api/contacts/${contact.id}`, { method: "DELETE" })
+      const res = await devFetch(`/api/contacts/${contact.id}`, { method: "DELETE" })
       if (!res.ok) throw new Error()
       setContacts((prev) => prev.filter((c) => c.id !== contact.id))
       addToast("Contact removed.", "success")
@@ -117,7 +122,7 @@ export default function ProfilePage() {
 
     for (const contact of unsaved) {
       try {
-        const res = await fetch("/api/contacts", {
+        const res = await devFetch("/api/contacts", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ name: contact.name, phone: contact.phone, relationship: contact.relationship }),

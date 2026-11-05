@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useToast } from "@/context/ToastContext"
+import { useDevFetch } from "@/app/hooks/useDevFetch"
 
 interface ReportModalProps {
   isOpen: boolean
@@ -29,6 +30,7 @@ export default function ReportModal({
   locatingUser,
 }: ReportModalProps) {
   const { addToast } = useToast()
+  const devFetch = useDevFetch()
   const [location, setLocation] = useState("")
   const [description, setDescription] = useState("")
   const [submitting, setSubmitting] = useState(false)
@@ -73,7 +75,7 @@ export default function ReportModal({
 
     setSubmitting(true)
     try {
-      const res = await fetch("/api/sightings", {
+      const res = await devFetch("/api/sightings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

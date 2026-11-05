@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react"
 import { useSightingsSocket } from "@/app/hooks/useSightingsSocket"
+import { useDevFetch } from "@/app/hooks/useDevFetch"
 import { GoogleMap, useJsApiLoader, Marker, Circle, InfoWindow } from "@react-google-maps/api"
 import ReportModal from "@/components/ReportModal"
 import { useSession } from "next-auth/react"
@@ -117,6 +118,7 @@ export default function MapPage() {
   const { data: session } = useSession()
   const isLoggedIn = !!session?.user
   const { addToast } = useToast()
+  const devFetch = useDevFetch()
   const { connected: liveConnected } = useSightingsSocket(session?.backendToken, setSightings)
   
   function requireAuth() {
@@ -134,14 +136,14 @@ export default function MapPage() {
   const fetchSightings = useCallback(async () => {
     setFetchError(false)
     try {
-      const res = await fetch("/api/sightings")
+      const res = await devFetch("/api/sightings")
       if (!res.ok) throw new Error()
       const data: Sighting[] = await res.json()
       setSightings(data)
     } catch {
       setFetchError(true)
     }
-  }, [])
+  }, [devFetch])
 
   useEffect(() => {
     fetchSightings()
@@ -194,7 +196,7 @@ export default function MapPage() {
   async function handleConfirm(id: string) {
     setConfirming(id)
     try {
-      const res = await fetch(`/api/sightings/${id}/confirm`, { method: "POST" })
+      const res = await devFetch(`/api/sightings/${id}/confirm`, { method: "POST" })
       if (!res.ok) throw new Error()
       await fetchSightings()
       setSelectedSighting((prev) => {
@@ -203,7 +205,7 @@ export default function MapPage() {
         return updated ?? prev
       })
     } catch {
-      // silent
+      addToast("Could not confirm this sighting. Try again.", "error")
     } finally {
       setConfirming(null)
     }
