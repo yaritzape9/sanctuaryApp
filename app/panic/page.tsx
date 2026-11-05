@@ -4,7 +4,7 @@ import { useSession } from "next-auth/react"
 import { useState } from "react"
 import Link from "next/link"
 import { useToast } from "@/context/ToastContext"
-import { fetchWithRetry } from "@/lib/fetchWithRetry"
+import { useDevFetch } from "@/app/hooks/useDevFetch"
 
 type Status = "safe" | "triggered"
 
@@ -13,6 +13,7 @@ const SESSION_EXPIRED = "Your session expired. Log in again, then try again."
 export default function PanicPage() {
   const [status, setStatus] = useState<Status>("safe")
   const { addToast } = useToast()
+  const devFetch = useDevFetch()
   // Identity comes from the backend JWT, so the page only needs to know
   // whether someone is logged in, never who
   const { status: sessionStatus } = useSession()
@@ -36,11 +37,15 @@ async function handleTrigger() {
 
   let res: Response | undefined
   try {
-    res = await fetchWithRetry("/api/panic/trigger", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ lat, lng }),
-    })
+    res = await devFetch(
+      "/api/panic/trigger",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lat, lng }),
+      },
+      { retry: true }
+    )
   } catch { /* every try failed to connect */ }
 
   if (res?.ok) {
@@ -56,7 +61,7 @@ async function handleTrigger() {
 async function handleReset() {
   let res: Response | undefined
   try {
-    res = await fetchWithRetry("/api/panic/safe", { method: "POST" })
+    res = await devFetch("/api/panic/safe", { method: "POST" }, { retry: true })
   } catch { /* every try failed to connect */ }
 
   if (res?.ok) {

@@ -27,6 +27,10 @@ Toast, ToastProvider, PageTransition, PanicShortcut, ReportModal
 - Toasts: `useToast()` from context/ToastContext.tsx returns `{ addToast }`.
   ToastProvider (mounted once in components/Providers.tsx) renders the only
   ToastContainer. Never render ToastContainer in a page or component
+- Client calls to our /api/* routes go through `useDevFetch()` from
+  app/hooks/useDevFetch.ts (`{ retry: true }` uses fetchWithRetry), so DEV
+  users see failures in the DevErrorBanner. Pages still check res.ok and
+  show their own toast for regular users
 - .env.local (gitignored): SANCTUARY_API_URL, plus dev stub
   SANCTUARY_DEV_JWT / SANCTUARY_DEV_USER_ID (being phased out via yp-auth* PRs)
 
@@ -61,6 +65,11 @@ yp-[featureName]
   known, a DEV sees it and everyone else has it discarded. reportError is
   stable and reads the live session, so fetches started on page load still
   report correctly
+- Fetch errors (yp-genericFetchErrors): map, profile, panic and ReportModal
+  fetches use useDevFetch, which reports the proxy's DEV-only `detail` (or
+  the status / network error) to the banner and clears it on success. Map
+  confirm now shows an error toast; contacts load checks res.ok. Login and
+  signup are left for 2.5
 - Full roadmap lives in the "Sanctuary — Status & Backlog" Claude Doc
 - In progress: yp-authCredentials (bridge NextAuth credentials login to
   backend JWT), then yp-authOAuth (Google sync), then yp-protectedRoutes
