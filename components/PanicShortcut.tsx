@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useRef } from "react"
+import { useCallback, useEffect, useState, useRef } from "react"
 import { useRouter } from "next/navigation"
 
 export default function PanicShortcut() {
@@ -10,10 +10,11 @@ export default function PanicShortcut() {
   const timerRef = useRef<NodeJS.Timeout | null>(null)
   const countdownRef = useRef<NodeJS.Timeout | null>(null)
 
-  function clearTimers() {
+  // Only touch refs and setters, so they can be stable across renders
+  const clearTimers = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current)
     if (countdownRef.current) clearInterval(countdownRef.current)
-  }
+  }, [])
 
   function handleConfirm() {
     clearTimers()
@@ -22,11 +23,11 @@ export default function PanicShortcut() {
     router.push("/panic")
   }
 
-  function handleCancel() {
+  const handleCancel = useCallback(() => {
     clearTimers()
     setConfirming(false)
     setCountdown(30)
-  }
+  }, [clearTimers])
 
   useEffect(() => {
     if (confirming) {
@@ -44,7 +45,7 @@ export default function PanicShortcut() {
     }
 
     return () => clearTimers()
-  }, [confirming, router])
+  }, [confirming, router, clearTimers])
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -58,7 +59,7 @@ export default function PanicShortcut() {
     }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
-  }, [confirming])
+  }, [confirming, handleCancel])
 
   if (!confirming) return null
 

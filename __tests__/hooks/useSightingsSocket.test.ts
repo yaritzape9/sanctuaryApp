@@ -1,6 +1,17 @@
 import { renderHook, act } from "@testing-library/react"
 import { vi, describe, it, expect, beforeEach, beforeAll } from "vitest"
 
+// The parts of the Client config the hook sets and these tests call.
+// Narrower than StompConfig, whose callbacks are optional and take a Frame
+type CapturedConfig = {
+  connectHeaders: Record<string, string>
+  reconnectDelay: number
+  webSocketFactory: () => unknown
+  onConnect: () => void
+  onDisconnect: () => void
+  onStompError: () => void
+}
+
 // Mock @stomp/stompjs's Client so we control connect/disconnect/subscribe
 // without ever opening a real socket. vi.hoisted lets these refs be used
 // inside vi.mock factories below (which run before imports).
@@ -8,11 +19,11 @@ const { activateMock, deactivateMock, subscribeMock, clientConfigs, ClientMock, 
   const activateMock = vi.fn()
   const deactivateMock = vi.fn()
   const subscribeMock = vi.fn()
-  const clientConfigs: any[] = []
+  const clientConfigs: CapturedConfig[] = []
   const sockJSMock = vi.fn().mockImplementation(function () {
     return {}
   })
-    const ClientMock = vi.fn().mockImplementation(function (config: any) {
+    const ClientMock = vi.fn().mockImplementation(function (config: CapturedConfig) {
     clientConfigs.push(config)
     return {
         activate: activateMock,

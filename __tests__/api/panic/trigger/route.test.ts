@@ -25,7 +25,7 @@ beforeEach(() => {
 
 describe("POST /api/panic/trigger", () => {
   it("returns 401 when there is no backendToken", async () => {
-    mockAuth.mockResolvedValue({ user: { id: "user-1" } } as any);
+    mockAuth.mockResolvedValue({ ...mockSession(), backendToken: undefined });
     const res = await POST(triggerRequest());
     expect(res.status).toBe(401);
   });

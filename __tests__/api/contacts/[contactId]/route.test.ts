@@ -25,7 +25,7 @@ describe("DELETE /api/contacts/[contactId]", () => {
   });
 
   it("returns 401 when session has no backendToken", async () => {
-    mockAuth.mockResolvedValue({ user: { id: "user-1" } } as any);
+    mockAuth.mockResolvedValue({ ...mockSession(), backendToken: undefined });
     const res = await DELETE(new Request("http://localhost"), { params });
     expect(res.status).toBe(401);
   });

@@ -69,7 +69,7 @@ export default function ProfilePage() {
       })
       .catch(() => addToast("Failed to load contacts.", "error"))
       .finally(() => setLoadingContacts(false))
-  }, [session, devFetch])
+  }, [session, devFetch, addToast])
 
   function addContactRow() {
     if (contacts.length >= 5) return
