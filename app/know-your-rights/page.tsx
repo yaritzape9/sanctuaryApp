@@ -7,7 +7,6 @@ export default function KnowYourRightsPage() {
   const { lang, setLang } = useLanguage()
   const d = translations[lang as Lang]
   const isRtl = lang === "ar"
-  const currentLanguage = languages.find((l) => l.code === lang)
 
   return (
     <main

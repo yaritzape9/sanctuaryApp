@@ -20,7 +20,7 @@ beforeEach(() => {
 
 describe("POST /api/sightings/[id]/confirm", () => {
   it("returns 401 when there is no backendToken", async () => {
-    mockAuth.mockResolvedValue({ user: { id: "user-1" } } as any);
+    mockAuth.mockResolvedValue({ ...mockSession(), backendToken: undefined });
     const res = await POST(new Request("http://localhost") as unknown as NextRequest, { params });    expect(res.status).toBe(401);
   });
 

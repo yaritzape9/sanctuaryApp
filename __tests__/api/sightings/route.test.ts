@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
 import type { Session } from "next-auth";
+import type { NextRequest } from "next/server";
 import { mockSession } from "../../utils/mockAuth";
 
 vi.mock("@/lib/auth", () => ({ auth: vi.fn() }));
@@ -10,7 +11,7 @@ const mockAuth = auth as unknown as Mock<() => Promise<Session | null>>;const mo
 global.fetch = mockFetch as unknown as typeof fetch;
 
 function postRequest(body: unknown = { latitude: 1, longitude: 2 }) {
-  return new Request("http://localhost", { method: "POST", body: JSON.stringify(body) }) as any;
+  return new Request("http://localhost", { method: "POST", body: JSON.stringify(body) }) as unknown as NextRequest;
 }
 
 beforeEach(() => {
@@ -62,7 +63,7 @@ describe("GET /api/sightings", () => {
 
 describe("POST /api/sightings", () => {
   it("returns 401 when there is no backendToken", async () => {
-    mockAuth.mockResolvedValue({ user: { id: "user-1" } } as any);
+    mockAuth.mockResolvedValue({ ...mockSession(), backendToken: undefined });
     const res = await POST(postRequest());
     expect(res.status).toBe(401);
   });

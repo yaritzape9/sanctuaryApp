@@ -31,6 +31,12 @@ Toast, ToastProvider, PageTransition, PanicShortcut, ReportModal
   app/hooks/useDevFetch.ts (`{ retry: true }` uses fetchWithRetry), so DEV
   users see failures in the DevErrorBanner. Pages still check res.ok and
   show their own toast for regular users
+- Lint: `npm run lint` (eslint . --max-warnings 0) is a CI step, so any
+  error or warning fails the PR. eslint.config.mjs uses FlatCompat because
+  eslint-config-next 15 only ships legacy configs. `next build` skips lint
+  (eslint.ignoreDuringBuilds). To try something quickly: `npm run dev` and
+  `npm run build` never lint; silence one line with
+  `// eslint-disable-next-line <rule> -- reason`; CI still blocks the merge
 - .env.local (gitignored): SANCTUARY_API_URL, plus dev stub
   SANCTUARY_DEV_JWT / SANCTUARY_DEV_USER_ID (being phased out via yp-auth* PRs)
 
@@ -70,6 +76,9 @@ yp-[featureName]
   the status / network error) to the banner and clears it on success. Map
   confirm now shows an error toast; contacts load checks res.ok. Login and
   signup are left for 2.5
+- Lint (yp-eslintConfigFix): ESLint had never run (the config targeted
+  eslint-config-next 16). Fixed for 15, all 15 problems cleared, and CI
+  runs Typecheck → Lint → Test → Build
 - Full roadmap lives in the "Sanctuary — Status & Backlog" Claude Doc
 - In progress: yp-authCredentials (bridge NextAuth credentials login to
   backend JWT), then yp-authOAuth (Google sync), then yp-protectedRoutes

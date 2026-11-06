@@ -13,7 +13,7 @@ export default function NotFound() {
         Page not found
       </p>
       <p className="mt-2 max-w-sm text-sm text-neutral-500">
-        This page doesn't exist or may have moved. You're still safe — let's
+        This page doesn&apos;t exist or may have moved. You&apos;re still safe — let&apos;s
         get you back.
       </p>
 
