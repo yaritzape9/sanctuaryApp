@@ -1,10 +1,12 @@
 "use client"
 
+import { useState } from "react"
+import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { signIn } from "next-auth/react"
 import { useToast } from "@/context/ToastContext"
-import { useLanguage } from "@/context/LanguageContext"
-import { languages } from "@/lib/translations/knowYourRights"
+import { useDevFetch } from "@/app/hooks/useDevFetch"
+import { BACKEND_UNAVAILABLE_MESSAGE } from "@/lib/authErrors"
 
 const inputClass = `
   w-full border border-sanctuary-border bg-sanctuary-surface rounded
@@ -15,15 +17,65 @@ const inputClass = `
 const labelClass = "section-label block mb-2"
 
 export default function SignupPage() {
-  const { lang } = useLanguage()
   const { addToast } = useToast()
+  const router = useRouter()
+  const devFetch = useDevFetch()
+  const [submitting, setSubmitting] = useState(false)
 
-  function handleSubmit(e: React.SubmitEvent) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    // TODO: connect to Spring Boot auth API
-    // on success: addToast("Account created successfully!", "success")
-    // on error:
-    addToast("Something went wrong. Please try again.", "error")
+
+    const formData = new FormData(e.currentTarget)
+    const email = formData.get("email") as string
+    const password = formData.get("password") as string
+
+    if (password !== formData.get("confirmPassword")) {
+      addToast("Passwords don't match.", "error")
+      return
+    }
+
+    setSubmitting(true)
+    try {
+      // No retry: if a first attempt worked but its response was lost, a retry
+      // would falsely report that the email already exists
+      const res = await devFetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      })
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => null)
+        addToast(body?.error ?? "Something went wrong. Please try again.", "error")
+        return
+      }
+    } catch {
+      addToast(BACKEND_UNAVAILABLE_MESSAGE, "error")
+      return
+    } finally {
+      setSubmitting(false)
+    }
+
+    await finishSignup(email, password)
+  }
+
+  // The account exists from here on, so a failure must not suggest trying signup again
+  async function finishSignup(email: string, password: string) {
+    let signedIn = false
+    try {
+      const result = await signIn("credentials", { email, password, redirect: false })
+      signedIn = !result?.error
+    } catch {
+      // Handled below, same as a refused sign-in
+    }
+
+    if (signedIn) {
+      addToast("Account created successfully!", "success")
+      router.push("/")
+    } else {
+      addToast("Account created. Please log in.", "success")
+      router.push("/login")
+    }
   }
 
   return (
@@ -83,74 +135,58 @@ export default function SignupPage() {
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className={labelClass}>Full name</label>
+              <label htmlFor="email" className={labelClass}>Email</label>
               <input
-                type="text"
-                placeholder="Your name"
-                required
-                className={inputClass}
-              />
-            </div>
-
-            <div>
-              <label className={labelClass}>Email</label>
-              <input
+                id="email"
+                name="email"
                 type="email"
+                autoComplete="email"
                 placeholder="you@example.com"
                 required
                 className={inputClass}
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className={labelClass}>Password</label>
-                <input
-                  type="password"
-                  placeholder="••••••••"
-                  required
-                  className={inputClass}
-                />
-              </div>
-              <div>
-                <label className={labelClass}>Confirm password</label>
-                <input
-                  type="password"
-                  placeholder="••••••••"
-                  required
-                  className={inputClass}
-                />
-              </div>
-            </div>
-
             <div>
-              <label className={labelClass}>Phone number</label>
-              <input
-                type="tel"
-                placeholder="+1 (555) 555-5555"
-                className={inputClass}
-              />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="password" className={labelClass}>Password</label>
+                  <input
+                    id="password"
+                    name="password"
+                    type="password"
+                    autoComplete="new-password"
+                    placeholder="••••••••"
+                    required
+                    minLength={12}
+                    maxLength={72}
+                    className={inputClass}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="confirmPassword" className={labelClass}>Confirm password</label>
+                  <input
+                    id="confirmPassword"
+                    name="confirmPassword"
+                    type="password"
+                    autoComplete="new-password"
+                    placeholder="••••••••"
+                    required
+                    className={inputClass}
+                  />
+                </div>
+              </div>
               <p className="text-xs text-neutral-600 mt-1.5">
-                Used for panic button SMS alerts only.
+                At least 12 characters.
               </p>
-            </div>
-
-            <div>
-              <label className={labelClass}>Preferred language</label>
-              <select defaultValue={lang} className={inputClass}>
-                {languages.map(({ code, label }) => (
-                  <option key={code} value={code}>
-                    {label}
-                  </option>
-                ))}
-              </select>
             </div>
 
             <button
               type="submit"
+              disabled={submitting}
               className="btn-primary w-full justify-center"
             >
-              Create account
+              {submitting ? "Creating account..." : "Create account"}
             </button>
 
             <p className="text-center text-sm text-neutral-600">

@@ -1,8 +1,16 @@
 // @vitest-environment node
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { authConfig } from "@/lib/auth.config";
+import { authConfig, authorizeCredentials, BackendUnavailableError } from "@/lib/auth.config";
+import { BACKEND_UNAVAILABLE_CODE } from "@/lib/authErrors";
 import type { Account, Profile, User } from "next-auth";
 import type { JWT } from "next-auth/jwt";
+
+// The real next-auth entry point can't load under Vitest (it imports next/server)
+vi.mock("next-auth", () => ({
+  CredentialsSignin: class extends Error {
+    code = "credentials";
+  },
+}));
 
 const mockFetch = vi.fn();
 global.fetch = mockFetch as unknown as typeof fetch;
@@ -141,5 +149,54 @@ describe("authConfig.callbacks.jwt", () => {
 
     expect(result.backendToken).toBeUndefined();
     expect(result.sub).toBeUndefined();
+  });
+});
+
+describe("authorizeCredentials", () => {
+  const credentials = { email: "user@example.com", password: "long-enough-password" };
+
+  beforeEach(() => {
+    mockFetch.mockReset();
+    vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  it("returns the user and backend token on success", async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({ token: "backend-jwt", userId: "user-1" }),
+    });
+
+    await expect(authorizeCredentials(credentials)).resolves.toEqual({
+      id: "user-1",
+      email: "user@example.com",
+      backendToken: "backend-jwt",
+    });
+  });
+
+  it("returns null when the backend refuses the credentials", async () => {
+    mockFetch.mockResolvedValueOnce({ ok: false, status: 401 });
+
+    await expect(authorizeCredentials(credentials)).resolves.toBeNull();
+  });
+
+  it("reports the backend as unavailable on a 5xx, not as a wrong password", async () => {
+    mockFetch.mockResolvedValueOnce({ ok: false, status: 503 });
+
+    const error = await authorizeCredentials(credentials).catch((e) => e);
+
+    expect(error).toBeInstanceOf(BackendUnavailableError);
+    expect(error.code).toBe(BACKEND_UNAVAILABLE_CODE);
+  });
+
+  it("reports the backend as unavailable when the request fails", async () => {
+    mockFetch.mockRejectedValueOnce(new TypeError("connect ECONNREFUSED"));
+
+    await expect(authorizeCredentials(credentials)).rejects.toBeInstanceOf(BackendUnavailableError);
+  });
+
+  it("returns null without calling the backend when a field is missing", async () => {
+    await expect(authorizeCredentials({ email: "user@example.com" })).resolves.toBeNull();
+    expect(mockFetch).not.toHaveBeenCalled();
   });
 });
