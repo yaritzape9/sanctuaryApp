@@ -1,10 +1,59 @@
 import Google from "next-auth/providers/google";
 import Credentials from "next-auth/providers/credentials";
+import { CredentialsSignin } from "next-auth";
 import type { Account, Profile, Session, User } from "next-auth";
 import type { JWT } from "next-auth/jwt";
+import { BACKEND_UNAVAILABLE_CODE } from "./authErrors";
 import { decodeRole } from "./jwt";
 
 const API_URL = process.env.SANCTUARY_API_URL;
+
+// Lets the login page tell "the service is down" apart from a wrong password
+export class BackendUnavailableError extends CredentialsSignin {
+  code = BACKEND_UNAVAILABLE_CODE;
+}
+
+// A 4xx means the credentials were refused (returns null). A 5xx or a failed
+// request says nothing about them, so it must not read as a wrong password.
+export async function authorizeCredentials(
+  credentials: Partial<Record<"email" | "password", unknown>>
+) {
+  if (!credentials?.email || !credentials?.password) {
+    return null;
+  }
+
+  try {
+    const res = await fetch(`${API_URL}/api/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: credentials.email,
+        password: credentials.password,
+      }),
+    });
+
+    if (res.status >= 500) {
+      throw new Error(`Backend returned ${res.status}`);
+    }
+    if (!res.ok) {
+      return null;
+    }
+
+    const data = await res.json();
+    if (!data?.token || !data?.userId) {
+      return null;
+    }
+
+    return {
+      id: data.userId as string,
+      email: credentials.email as string,
+      backendToken: data.token as string,
+    };
+  } catch (err) {
+    console.error("Credentials authorize error:", err);
+    throw new BackendUnavailableError();
+  }
+}
 
 export const authConfig = {
   secret: process.env.NEXTAUTH_SECRET,
@@ -18,40 +67,7 @@ export const authConfig = {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          return null;
-        }
-
-        try {
-          const res = await fetch(`${API_URL}/api/auth/login`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              email: credentials.email,
-              password: credentials.password,
-            }),
-          });
-
-          if (!res.ok) {
-            return null;
-          }
-
-          const data = await res.json();
-          if (!data?.token || !data?.userId) {
-            return null;
-          }
-
-          return {
-            id: data.userId,
-            email: credentials.email as string,
-            backendToken: data.token,
-          };
-        } catch (err) {
-          console.error("Credentials authorize error:", err);
-          return null;
-        }
-      },
+      authorize: authorizeCredentials,
     }),
   ],
   pages: {

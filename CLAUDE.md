@@ -74,8 +74,16 @@ yp-[featureName]
 - Fetch errors (yp-genericFetchErrors): map, profile, panic and ReportModal
   fetches use useDevFetch, which reports the proxy's DEV-only `detail` (or
   the status / network error) to the banner and clears it on success. Map
-  confirm now shows an error toast; contacts load checks res.ok. Login and
-  signup are left for 2.5
+  confirm now shows an error toast; contacts load checks res.ok
+- Signup (yp-signupFlow): the form collects only email and password (12 to
+  72 characters) plus a confirm field. app/api/auth/register forwards only
+  those two fields, returns fixed messages and never passes the backend JWT
+  to the browser; the page then signs in through NextAuth. No retry on
+  signup. A duplicate email is a 409 until 3.17 replaces it with "check your
+  email"
+- Login errors (yp-signupFlow): authorizeCredentials returns null on a 4xx
+  and throws BackendUnavailableError on a 5xx or failed request, so the login
+  page can show "can't reach the service" instead of a wrong-password message
 - Lint (yp-eslintConfigFix): ESLint had never run (the config targeted
   eslint-config-next 16). Fixed for 15, all 15 problems cleared, and CI
   runs Typecheck → Lint → Test → Build

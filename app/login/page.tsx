@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { signIn } from "next-auth/react"
 import { useToast } from "@/context/ToastContext"
+import { BACKEND_UNAVAILABLE_CODE, BACKEND_UNAVAILABLE_MESSAGE } from "@/lib/authErrors"
 
 const inputClass = `
   w-full border border-sanctuary-border bg-sanctuary-surface rounded
@@ -27,21 +28,31 @@ export default function LoginPage() {
     const email = formData.get("email") as string
     const password = formData.get("password") as string
 
-    const result = await signIn("credentials", {
-      email,
-      password,
-      redirect: false,
-    })
+    try {
+      const result = await signIn("credentials", {
+        email,
+        password,
+        redirect: false,
+      })
 
-    setSubmitting(false)
+      if (result?.error) {
+        addToast(
+          result.code === BACKEND_UNAVAILABLE_CODE
+            ? BACKEND_UNAVAILABLE_MESSAGE
+            : "Invalid email or password.",
+          "error"
+        )
+        return
+      }
 
-    if (result?.error) {
-      addToast("Invalid email or password.", "error")
-      return
+      addToast("Welcome back!", "success")
+      router.push("/")
+    } catch {
+      // signIn itself failed, e.g. the phone lost its connection
+      addToast(BACKEND_UNAVAILABLE_MESSAGE, "error")
+    } finally {
+      setSubmitting(false)
     }
-
-    addToast("Welcome back!", "success")
-    router.push("/")
   }
 
   return (
