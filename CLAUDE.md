@@ -87,6 +87,21 @@ yp-[featureName]
 - Lint (yp-eslintConfigFix): ESLint had never run (the config targeted
   eslint-config-next 16). Fixed for 15, all 15 problems cleared, and CI
   runs Typecheck → Lint → Test → Build
+- Backend input validation (backend yp-inputValidation): contact phones are
+  US-only. The backend accepts typed formats like "(212) 555-0100" and
+  stores and returns "+12125550100"; anything else is 400 "Invalid fields:
+  phone". Contact name is 1 to 100 characters, relationship required.
+  Login/oauth-sync bodies with missing or oversized fields are 400 (still a
+  4xx, so not "service unavailable"). Panic lat/lng are optional: a missing
+  or bad location still sends the alert, and the SMS says "Their location
+  could not be shared."
+- Contact phone + panic location UI (yp-contactPhoneAndPanicLocationUi):
+  the contacts form shows a US-only hint, and a 400 from the backend shows
+  a friendly message under that row (mapped from the field names in
+  "Invalid fields: ...", cleared on edit). The browser does not re-check
+  phones; the backend is the only validator. Saved numbers show as the
+  backend returns them (+1XXXXXXXXXX). /panic tells the user, in the toast
+  and the status card, when the alert went out without their location
 - Full roadmap lives in the "Sanctuary — Status & Backlog" Claude Doc
 - In progress: yp-authCredentials (bridge NextAuth credentials login to
   backend JWT), then yp-authOAuth (Google sync), then yp-protectedRoutes

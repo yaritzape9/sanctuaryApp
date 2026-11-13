@@ -26,6 +26,19 @@ function relationshipLabel(value: string) {
   return relationships.find((r) => r.value === value)?.label ?? value
 }
 
+// The backend's 400 names the bad fields ("Invalid fields: name, phone"),
+// never the submitted values, so we map field names to a friendly message
+function invalidContactMessage(backendMessage: unknown) {
+  const fields =
+    typeof backendMessage === "string" && backendMessage.startsWith("Invalid fields:")
+      ? backendMessage.slice("Invalid fields:".length).split(",").map((f) => f.trim())
+      : []
+  const parts: string[] = []
+  if (fields.includes("name")) parts.push("Name must be 1 to 100 characters.")
+  if (fields.includes("phone")) parts.push("Enter a 10-digit US phone number, like (212) 555-0100.")
+  return parts.length > 0 ? parts.join(" ") : "Check this contact's details and try again."
+}
+
 interface EmergencyContact {
   id: string
   name: string
@@ -33,6 +46,7 @@ interface EmergencyContact {
   relationship: string
   _tempId?: string
   _saved: boolean
+  _error?: string
 }
 
 export default function ProfilePage() {
@@ -83,7 +97,8 @@ export default function ProfilePage() {
     setContacts((prev) =>
       prev.map((c) => {
         const match = c._saved ? c.id === key : c._tempId === key
-        return match ? { ...c, [field]: value } : c
+        // Editing the row clears its save error
+        return match ? { ...c, [field]: value, _error: undefined } : c
       })
     )
   }
@@ -127,6 +142,16 @@ export default function ProfilePage() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ name: contact.name, phone: contact.phone, relationship: contact.relationship }),
         })
+
+        if (res.status === 400) {
+          const data = await res.json().catch(() => ({}))
+          const error = invalidContactMessage(data.message)
+          setContacts((prev) =>
+            prev.map((c) => (c._tempId === contact._tempId ? { ...c, _error: error } : c))
+          )
+          failed++
+          continue
+        }
 
         if (!res.ok) throw new Error()
 
@@ -333,7 +358,8 @@ export default function ProfilePage() {
                               type="tel"
                               value={contact.phone}
                               onChange={(e) => updateContactField(key, "phone", e.target.value)}
-                              placeholder="Phone number"
+                              placeholder="(212) 555-0100"
+                              aria-invalid={contact._error ? true : undefined}
                               className={inputClass}
                             />
                             <button
@@ -357,11 +383,22 @@ export default function ProfilePage() {
                               ))}
                             </select>
                           </div>
+                          {contact._error && (
+                            <p role="alert" className="text-xs text-red-400 mt-2 px-1">
+                              {contact._error}
+                            </p>
+                          )}
                         </div>
                       )}
                     </div>
                   )
                 })}
+
+                {hasUnsaved && (
+                  <p className="text-xs text-neutral-600">
+                    US phone numbers only, like (212) 555-0100.
+                  </p>
+                )}
 
                 {hasUnsaved && (
                   <button
