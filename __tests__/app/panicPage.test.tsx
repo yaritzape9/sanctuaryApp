@@ -103,6 +103,21 @@ describe("PanicPage", () => {
 
     expect(await screen.findByText("Alert sent to your emergency contacts.")).toBeInTheDocument();
     expect(screen.getByText("Alert triggered.")).toBeInTheDocument();
+    expect(screen.getByText(/with your current location/)).toBeInTheDocument();
+  });
+
+  it("tells the user when the alert went out without their location", async () => {
+    mockLocationDenied();
+    mockFetchWithRetry.mockResolvedValueOnce(response(200));
+    renderPage();
+
+    fireEvent.click(panicButton());
+
+    expect(
+      await screen.findByText("Alert sent, but your location could not be shared.")
+    ).toBeInTheDocument();
+    expect(screen.getByText(/but your location could not be shared\. Tell them where you are/)).toBeInTheDocument();
+    expect(screen.queryByText(/with your current location/)).not.toBeInTheDocument();
   });
 
   it("tells the user to log in again on a 401", async () => {

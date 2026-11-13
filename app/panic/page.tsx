@@ -12,6 +12,7 @@ const SESSION_EXPIRED = "Your session expired. Log in again, then try again."
 
 export default function PanicPage() {
   const [status, setStatus] = useState<Status>("safe")
+  const [locationShared, setLocationShared] = useState(true)
   const { addToast } = useToast()
   const devFetch = useDevFetch()
   // Identity comes from the backend JWT, so the page only needs to know
@@ -49,8 +50,17 @@ async function handleTrigger() {
   } catch { /* every try failed to connect */ }
 
   if (res?.ok) {
+    // lat stays undefined when geolocation failed or was denied, and then the
+    // backend's SMS says the location could not be shared
+    const shared = lat !== undefined && lng !== undefined
+    setLocationShared(shared)
     setStatus("triggered")
-    addToast("Alert sent to your emergency contacts.", "success")
+    addToast(
+      shared
+        ? "Alert sent to your emergency contacts."
+        : "Alert sent, but your location could not be shared.",
+      "success"
+    )
   } else if (res?.status === 401) {
     addToast(SESSION_EXPIRED, "error")
   } else {
@@ -165,7 +175,9 @@ async function handleReset() {
             </div>
             <p className="text-sm text-neutral-400 leading-relaxed">
               {status === "triggered"
-                ? "An SMS alert has been sent to your emergency contacts with your current location. You can cancel this alert once you are safe."
+                ? locationShared
+                  ? "An SMS alert has been sent to your emergency contacts with your current location. You can cancel this alert once you are safe."
+                  : "An SMS alert has been sent to your emergency contacts, but your location could not be shared. Tell them where you are if you can. You can cancel this alert once you are safe."
                 : "No active alerts. Your emergency contacts will be notified the moment you trigger the panic button."}
             </p>
           </div>
