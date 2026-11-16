@@ -5,14 +5,26 @@ import { useState } from "react"
 import Link from "next/link"
 import { useToast } from "@/context/ToastContext"
 import { useDevFetch } from "@/app/hooks/useDevFetch"
+import { parsePanicResult, type PanicResult } from "@/lib/panicResult"
 
 type Status = "safe" | "triggered"
 
 const SESSION_EXPIRED = "Your session expired. Log in again, then try again."
 
+async function readResult(res: Response): Promise<PanicResult | null> {
+  try {
+    return parsePanicResult(await res.json())
+  } catch {
+    return null
+  }
+}
+
 export default function PanicPage() {
   const [status, setStatus] = useState<Status>("safe")
   const [locationShared, setLocationShared] = useState(true)
+  // Set only after a partial send; null means every contact was reached
+  const [reached, setReached] = useState<{ sent: number; total: number } | null>(null)
+  const [noContacts, setNoContacts] = useState(false)
   const { addToast } = useToast()
   const devFetch = useDevFetch()
   // Identity comes from the backend JWT, so the page only needs to know
@@ -24,6 +36,7 @@ async function handleTrigger() {
     addToast("Please log in before triggering an alert.", "error")
     return
   }
+  setNoContacts(false)
 
   let lat: number | undefined
   let lng: number | undefined
@@ -53,14 +66,30 @@ async function handleTrigger() {
     // lat stays undefined when geolocation failed or was denied, and then the
     // backend's SMS says the location could not be shared
     const shared = lat !== undefined && lng !== undefined
+    const result = await readResult(res)
     setLocationShared(shared)
     setStatus("triggered")
-    addToast(
-      shared
-        ? "Alert sent to your emergency contacts."
-        : "Alert sent, but your location could not be shared.",
-      "success"
-    )
+
+    if (result?.status === "partial") {
+      // Some texts failed. Don't retry: the ones that went out would be sent twice
+      const total = result.sent + result.failed
+      setReached({ sent: result.sent, total })
+      addToast(
+        `Alert reached ${result.sent} of ${total} contacts${shared ? "" : ", without your location"}. Text the others directly.`,
+        "error"
+      )
+    } else {
+      setReached(null)
+      addToast(
+        shared
+          ? "Alert sent to your emergency contacts."
+          : "Alert sent, but your location could not be shared.",
+        "success"
+      )
+    }
+  } else if (res?.status === 422) {
+    setNoContacts(true)
+    addToast("No one was alerted. Add an emergency contact first.", "error")
   } else if (res?.status === 401) {
     addToast(SESSION_EXPIRED, "error")
   } else {
@@ -75,14 +104,30 @@ async function handleReset() {
   } catch { /* every try failed to connect */ }
 
   if (res?.ok) {
+    const result = await readResult(res)
     setStatus("safe")
-    addToast("Glad you're safe.", "success")
+    setReached(null)
+    addToast(
+      result?.status === "partial"
+        ? `All-clear reached ${result.sent} of ${result.sent + result.failed} contacts. Tell the others you're safe.`
+        : "Glad you're safe.",
+      result?.status === "partial" ? "info" : "success"
+    )
+  } else if (res?.status === 422) {
+    // Their contacts were deleted while the alert was active
+    setStatus("safe")
+    setReached(null)
+    addToast("You're marked safe. There were no contacts to notify.", "info")
   } else if (res?.status === 401) {
     addToast(SESSION_EXPIRED, "error")
   } else {
     addToast("Could not send safe status. Try again.", "error")
   }
 }
+
+  const contactsText = reached
+    ? `${reached.sent} of your ${reached.total} emergency contacts`
+    : "your emergency contacts"
 
   return (
     <main className="mobile-screen px-8 md:px-16 lg:px-24 py-16">
@@ -122,6 +167,15 @@ async function handleReset() {
                 <span className="absolute inset-0 rounded-full border-2 border-red-400 animate-ping opacity-20" />
               </button>
 
+              {noContacts && (
+                <div role="alert" className="border border-red-500/40 bg-red-500/5 rounded-xl px-5 py-4 text-sm text-neutral-300 text-center max-w-sm">
+                  No one was alerted: you have no emergency contacts.{" "}
+                  <Link href="/profile" className="text-white underline">
+                    Add an emergency contact
+                  </Link>
+                </div>
+              )}
+
               <p className="text-xs text-neutral-600 text-center max-w-xs">
                 Make sure your{" "}
                 <Link href="/profile" className="text-neutral-400 hover:text-white underline transition-colors">
@@ -133,8 +187,10 @@ async function handleReset() {
           ) : (
             <>
               <p className="text-neutral-400 text-center leading-relaxed max-w-sm">
-                Your emergency contacts have been notified. Stay calm and assert
-                your rights. Help is on the way.
+                {reached
+                  ? `Your alert reached ${reached.sent} of ${reached.total} emergency contacts. Text the others if you can.`
+                  : "Your emergency contacts have been notified."}{" "}
+                Stay calm and assert your rights. Help is on the way.
               </p>
 
               {/* Triggered state button */}
@@ -176,8 +232,8 @@ async function handleReset() {
             <p className="text-sm text-neutral-400 leading-relaxed">
               {status === "triggered"
                 ? locationShared
-                  ? "An SMS alert has been sent to your emergency contacts with your current location. You can cancel this alert once you are safe."
-                  : "An SMS alert has been sent to your emergency contacts, but your location could not be shared. Tell them where you are if you can. You can cancel this alert once you are safe."
+                  ? `An SMS alert has been sent to ${contactsText} with your current location. You can cancel this alert once you are safe.`
+                  : `An SMS alert has been sent to ${contactsText}, but your location could not be shared. Tell them where you are if you can. You can cancel this alert once you are safe.`
                 : "No active alerts. Your emergency contacts will be notified the moment you trigger the panic button."}
             </p>
           </div>

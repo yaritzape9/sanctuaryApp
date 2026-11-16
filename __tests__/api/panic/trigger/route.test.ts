@@ -11,6 +11,12 @@ const mockAuth = auth as unknown as Mock<() => Promise<Session | null>>;
 const mockFetch = vi.fn();
 global.fetch = mockFetch as unknown as typeof fetch;
 
+const backend = (status: number, body: unknown) => ({
+  ok: status >= 200 && status < 300,
+  status,
+  text: async () => JSON.stringify(body),
+});
+
 function triggerRequest(body: unknown = { lat: 1, lng: 2 }) {
   return new Request("http://localhost", {
     method: "POST",
@@ -30,16 +36,52 @@ describe("POST /api/panic/trigger", () => {
     expect(res.status).toBe(401);
   });
 
-  it("forwards lat and lng to the backend and returns its message", async () => {
+  it("forwards lat and lng to the backend and returns its outcome", async () => {
     mockAuth.mockResolvedValue(mockSession());
-    mockFetch.mockResolvedValueOnce({ ok: true, status: 200, text: async () => "Alert sent" });
+    mockFetch.mockResolvedValueOnce(backend(200, { status: "sent", sent: 2, failed: 0 }));
 
     const res = await POST(triggerRequest({ lat: 10, lng: 20 }));
     const body = await res.json();
 
     const [, init] = mockFetch.mock.calls[0];
     expect(JSON.parse(init.body as string)).toEqual({ lat: 10, lng: 20 });
-    expect(body).toEqual({ message: "Alert sent" });
+    expect(res.status).toBe(200);
+    expect(body).toEqual({ status: "sent", sent: 2, failed: 0 });
+  });
+
+  it.each([
+    [200, { status: "partial", sent: 2, failed: 1 }],
+    [422, { status: "no_contacts", sent: 0, failed: 0 }],
+    [502, { status: "failed", sent: 0, failed: 3 }],
+  ])("passes a %i outcome through with the same status", async (status, outcome) => {
+    mockAuth.mockResolvedValue(mockSession({ role: "USER" }));
+    mockFetch.mockResolvedValueOnce(backend(status, outcome));
+
+    const res = await POST(triggerRequest());
+
+    expect(res.status).toBe(status);
+    expect(await res.json()).toEqual(outcome);
+  });
+
+  it("keeps only status, sent and failed from the backend's body", async () => {
+    mockAuth.mockResolvedValue(mockSession());
+    mockFetch.mockResolvedValueOnce(
+      backend(200, { status: "sent", sent: 1, failed: 0, phone: "+12125550100", userId: "u1" })
+    );
+
+    const body = await (await POST(triggerRequest())).json();
+
+    expect(body).toEqual({ status: "sent", sent: 1, failed: 0 });
+  });
+
+  it("returns an empty 200, never an error, when a 200 body can't be read", async () => {
+    mockAuth.mockResolvedValue(mockSession());
+    mockFetch.mockResolvedValueOnce({ ok: true, status: 200, text: async () => "Alert sent" });
+
+    const res = await POST(triggerRequest());
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({});
   });
 
   it("drops userId, email and any other field the client sends", async () => {
