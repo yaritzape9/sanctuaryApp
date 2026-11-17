@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { errorResponse } from "@/lib/apiError";
+import { parsePanicText } from "@/lib/panicResult";
 
 const API_URL = process.env.SANCTUARY_API_URL;
 
@@ -32,6 +33,13 @@ export async function POST(req: NextRequest) {
 
     const text = await res.text();
 
+    // 200, 422 and 502 carry the outcome as {status, sent, failed}. Rebuild it from
+    // those 3 fields so nothing else from the backend reaches the browser.
+    const result = parsePanicText(text);
+    if (result) {
+      return NextResponse.json(result, { status: res.status });
+    }
+
     if (!res.ok) {
       return errorResponse(
         session,
@@ -42,7 +50,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    return NextResponse.json({ message: text }, { status: res.status });
+    // A 200 we can't read still means texts went out. Never turn it into an
+    // error, or fetchWithRetry would retry and text the contacts twice.
+    return NextResponse.json({}, { status: 200 });
   } catch (err) {
     return errorResponse(
       session,

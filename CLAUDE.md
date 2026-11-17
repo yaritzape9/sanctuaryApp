@@ -102,6 +102,13 @@ yp-[featureName]
   phones; the backend is the only validator. Saved numbers show as the
   backend returns them (+1XXXXXXXXXX). /panic tells the user, in the toast
   and the status card, when the alert went out without their location
+- Panic outcome UI (yp-panicOutcomeUi): the panic proxies forward only
+  { status, sent, failed } (lib/panicResult.ts rebuilds it from those 3
+  fields) with the backend's status: 200 sent/partial, 422 no_contacts,
+  502 failed. A 200 with an unreadable body becomes an empty 200, never an
+  error, so fetchWithRetry can't text contacts twice. /panic shows "Alert
+  reached 2 of 3 contacts" on a partial send, and on 422 an inline notice
+  with a link to /profile; /safe does the same for the all-clear
 - Full roadmap lives in the "Sanctuary — Status & Backlog" Claude Doc
 - In progress: yp-authCredentials (bridge NextAuth credentials login to
   backend JWT), then yp-authOAuth (Google sync), then yp-protectedRoutes
