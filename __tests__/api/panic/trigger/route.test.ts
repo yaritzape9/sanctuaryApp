@@ -17,9 +17,10 @@ const backend = (status: number, body: unknown) => ({
   text: async () => JSON.stringify(body),
 });
 
-function triggerRequest(body: unknown = { lat: 1, lng: 2 }) {
+function triggerRequest(body: unknown = { lat: 1, lng: 2 }, headers: Record<string, string> = {}) {
   return new Request("http://localhost", {
     method: "POST",
+    headers,
     body: JSON.stringify(body),
   }) as unknown as NextRequest;
 }
@@ -134,5 +135,16 @@ describe("POST /api/panic/trigger", () => {
 
     expect(res.status).toBe(502);
     expect(body).toEqual({ error: "Unable to reach panic service" });
+  });
+
+  it("forwards a valid Idempotency-Key and drops a malformed one", async () => {
+    mockAuth.mockResolvedValue(mockSession());
+    mockFetch.mockResolvedValue(backend(200, { status: "sent", sent: 1, failed: 0 }));
+
+    await POST(triggerRequest(undefined, { "Idempotency-Key": "3f2a9c1e-5b7d-4e8a-9c21-7d4e5f6a8b90" }));
+    await POST(triggerRequest(undefined, { "Idempotency-Key": "x".repeat(5000) }));
+
+    expect(mockFetch.mock.calls[0][1].headers["Idempotency-Key"]).toBe("3f2a9c1e-5b7d-4e8a-9c21-7d4e5f6a8b90");
+    expect(mockFetch.mock.calls[1][1].headers).not.toHaveProperty("Idempotency-Key");
   });
 });

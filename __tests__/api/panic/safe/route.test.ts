@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
 import type { Session } from "next-auth";
 import { mockSession } from "../../../utils/mockAuth";
+import type { NextRequest } from "next/server";
 
 vi.mock("@/lib/auth", () => ({ auth: vi.fn() }));
 import { auth } from "@/lib/auth";
@@ -16,6 +17,10 @@ const backend = (status: number, body: unknown) => ({
   text: async () => JSON.stringify(body),
 });
 
+function safeRequest(headers: Record<string, string> = {}) {
+  return new Request("http://localhost", { method: "POST", headers }) as unknown as NextRequest;
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   vi.spyOn(console, "error").mockImplementation(() => {});
@@ -24,7 +29,7 @@ beforeEach(() => {
 describe("POST /api/panic/safe", () => {
   it("returns 401 when there is no backendToken", async () => {
     mockAuth.mockResolvedValue({ ...mockSession(), backendToken: undefined });
-    const res = await POST();
+    const res = await POST(safeRequest());
     expect(res.status).toBe(401);
   });
 
@@ -32,7 +37,7 @@ describe("POST /api/panic/safe", () => {
     mockAuth.mockResolvedValue(mockSession());
     mockFetch.mockResolvedValueOnce(backend(200, { status: "sent", sent: 2, failed: 0 }));
 
-    const res = await POST();
+    const res = await POST(safeRequest());
     const body = await res.json();
 
     expect(mockFetch).toHaveBeenCalledWith(
@@ -54,7 +59,7 @@ describe("POST /api/panic/safe", () => {
     mockAuth.mockResolvedValue(mockSession({ role: "USER" }));
     mockFetch.mockResolvedValueOnce(backend(status, { ...outcome, phone: "+12125550100" }));
 
-    const res = await POST();
+    const res = await POST(safeRequest());
 
     expect(res.status).toBe(status);
     expect(await res.json()).toEqual(outcome);
@@ -64,7 +69,7 @@ describe("POST /api/panic/safe", () => {
     mockAuth.mockResolvedValue(mockSession());
     mockFetch.mockResolvedValueOnce({ ok: true, status: 200, text: async () => "Panic cleared" });
 
-    const res = await POST();
+    const res = await POST(safeRequest());
 
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({});
@@ -74,7 +79,7 @@ describe("POST /api/panic/safe", () => {
     mockAuth.mockResolvedValue(mockSession({ role: "USER" }));
     mockFetch.mockResolvedValueOnce({ ok: false, status: 500, text: async () => "" });
 
-    const res = await POST();
+    const res = await POST(safeRequest());
     const body = await res.json();
 
     expect(res.status).toBe(500);
@@ -85,7 +90,7 @@ describe("POST /api/panic/safe", () => {
     mockAuth.mockResolvedValue(mockSession({ role: "DEV" }));
     mockFetch.mockResolvedValueOnce({ ok: false, status: 500, text: async () => "db locked" });
 
-    const res = await POST();
+    const res = await POST(safeRequest());
     const body = await res.json();
 
     expect(body.detail.message).toBe("db locked");
@@ -95,10 +100,21 @@ describe("POST /api/panic/safe", () => {
     mockAuth.mockResolvedValue(mockSession({ role: "USER" }));
     mockFetch.mockRejectedValueOnce(new Error("ECONNREFUSED"));
 
-    const res = await POST();
+    const res = await POST(safeRequest());
     const body = await res.json();
 
     expect(res.status).toBe(502);
     expect(body).toEqual({ error: "Unable to reach panic service" });
+  });
+
+  it("forwards a valid Idempotency-Key and drops a malformed one", async () => {
+    mockAuth.mockResolvedValue(mockSession());
+    mockFetch.mockResolvedValue(backend(200, { status: "sent", sent: 1, failed: 0 }));
+
+    await POST(safeRequest({ "Idempotency-Key": "3f2a9c1e-5b7d-4e8a-9c21-7d4e5f6a8b90" }));
+    await POST(safeRequest({ "Idempotency-Key": "not-a-uuid" }));
+
+    expect(mockFetch.mock.calls[0][1].headers["Idempotency-Key"]).toBe("3f2a9c1e-5b7d-4e8a-9c21-7d4e5f6a8b90");
+    expect(mockFetch.mock.calls[1][1].headers).not.toHaveProperty("Idempotency-Key");
   });
 });

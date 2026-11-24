@@ -43,6 +43,8 @@ function mockLocationDenied() {
   });
 }
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
 const panicButton = () => screen.getByRole("button", { name: /panic/i });
 
 beforeEach(() => {
@@ -252,6 +254,40 @@ describe("PanicPage", () => {
     fireEvent.click(await screen.findByRole("button", { name: "I am safe now" }));
 
     expect(await screen.findByText("Glad you're safe.")).toBeInTheDocument();
-    expect(mockFetchWithRetry).toHaveBeenLastCalledWith("/api/panic/safe", { method: "POST" });
+    expect(mockFetchWithRetry).toHaveBeenLastCalledWith("/api/panic/safe", {
+      method: "POST",
+      headers: { "Idempotency-Key": expect.stringMatching(UUID) },
+    });
+  });
+
+  it("sends a new Idempotency-Key with each press", async () => {
+    mockFetchWithRetry.mockResolvedValue(response(200));
+    renderPage();
+
+    fireEvent.click(panicButton());
+    fireEvent.click(await screen.findByRole("button", { name: "I am safe now" }));
+    await screen.findByText("Glad you're safe.");
+    fireEvent.click(panicButton());
+    await waitFor(() => expect(mockFetchWithRetry).toHaveBeenCalledTimes(3));
+
+    const keys = mockFetchWithRetry.mock.calls.map(
+      ([, init]) => (init!.headers as Record<string, string>)["Idempotency-Key"]
+    );
+    keys.forEach((key) => expect(key).toMatch(UUID));
+    expect(new Set(keys).size).toBe(3);
+  });
+
+  it("disables the panic button while the alert is sending, so a double tap sends once", async () => {
+    let reply!: (res: Response) => void;
+    mockFetchWithRetry.mockReturnValueOnce(new Promise((resolve) => { reply = resolve; }));
+    renderPage();
+
+    fireEvent.click(panicButton());
+    await waitFor(() => expect(panicButton()).toBeDisabled());
+    fireEvent.click(panicButton());
+
+    reply(response(200));
+    expect(await screen.findByText("Alert triggered.")).toBeInTheDocument();
+    expect(mockFetchWithRetry).toHaveBeenCalledTimes(1);
   });
 });
