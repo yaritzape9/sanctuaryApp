@@ -1,11 +1,11 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { errorResponse } from "@/lib/apiError";
-import { parsePanicText } from "@/lib/panicResult";
+import { idempotencyHeaders, parsePanicText } from "@/lib/panicResult";
 
 const API_URL = process.env.SANCTUARY_API_URL;
 
-export async function POST() {
+export async function POST(req: NextRequest) {
   const session = await auth();
 
   if (!session?.backendToken) {
@@ -17,6 +17,7 @@ export async function POST() {
       method: "POST",
       headers: {
         Authorization: `Bearer ${session.backendToken}`,
+        ...idempotencyHeaders(req),
       },
     });
 

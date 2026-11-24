@@ -20,6 +20,17 @@ export function parsePanicResult(value: unknown): PanicResult | null {
   return { status: status as PanicResult["status"], sent, failed }
 }
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/**
+ * The browser's Idempotency-Key (one per panic press), forwarded to the backend only
+ * when it's a UUID. Anything else is dropped and the alert still goes out.
+ */
+export function idempotencyHeaders(req: Request): Record<string, string> {
+  const key = req.headers.get("Idempotency-Key")
+  return key && UUID.test(key) ? { "Idempotency-Key": key } : {}
+}
+
 /** Same as parsePanicResult, for a raw response body that may not be JSON. */
 export function parsePanicText(text: string): PanicResult | null {
   try {

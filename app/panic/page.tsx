@@ -11,6 +11,14 @@ type Status = "safe" | "triggered"
 
 const SESSION_EXPIRED = "Your session expired. Log in again, then try again."
 
+// One random key per button press. fetchWithRetry resends the same init, so every
+// retry of this press carries the same key and the backend texts contacts only once.
+// If the browser can't make one, the alert still goes out, just without the key.
+function idempotencyHeaders(): Record<string, string> {
+  const key = globalThis.crypto?.randomUUID?.()
+  return key ? { "Idempotency-Key": key } : {}
+}
+
 async function readResult(res: Response): Promise<PanicResult | null> {
   try {
     return parsePanicResult(await res.json())
@@ -25,6 +33,8 @@ export default function PanicPage() {
   // Set only after a partial send; null means every contact was reached
   const [reached, setReached] = useState<{ sent: number; total: number } | null>(null)
   const [noContacts, setNoContacts] = useState(false)
+  // True from the press until the reply, so a second tap can't send a second alert
+  const [sending, setSending] = useState(false)
   const { addToast } = useToast()
   const devFetch = useDevFetch()
   // Identity comes from the backend JWT, so the page only needs to know
@@ -55,7 +65,7 @@ async function handleTrigger() {
       "/api/panic/trigger",
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...idempotencyHeaders() },
         body: JSON.stringify({ lat, lng }),
       },
       { retry: true }
@@ -100,7 +110,11 @@ async function handleTrigger() {
 async function handleReset() {
   let res: Response | undefined
   try {
-    res = await devFetch("/api/panic/safe", { method: "POST" }, { retry: true })
+    res = await devFetch(
+      "/api/panic/safe",
+      { method: "POST", headers: idempotencyHeaders() },
+      { retry: true }
+    )
   } catch { /* every try failed to connect */ }
 
   if (res?.ok) {
@@ -124,6 +138,15 @@ async function handleReset() {
     addToast("Could not send safe status. Try again.", "error")
   }
 }
+
+  async function whileSending(action: () => Promise<void>) {
+    setSending(true)
+    try {
+      await action()
+    } finally {
+      setSending(false)
+    }
+  }
 
   const contactsText = reached
     ? `${reached.sent} of your ${reached.total} emergency contacts`
@@ -155,8 +178,8 @@ async function handleReset() {
 
               {/* Panic button */}
               <button
-                onClick={handleTrigger}
-                disabled={sessionStatus === "loading"}
+                onClick={() => whileSending(handleTrigger)}
+                disabled={sending || sessionStatus === "loading"}
                 className="relative w-48 h-48 rounded-full bg-red-500 hover:bg-red-600 active:scale-95 transition-all duration-150 shadow-lg shadow-red-500/30 flex items-center justify-center flex-col gap-2 group disabled:opacity-50 disabled:cursor-wait"
               >
                 <span className="text-4xl">🆘</span>
@@ -203,8 +226,9 @@ async function handleReset() {
               </div>
 
               <button
-                onClick={handleReset}
-                className="btn-outline px-6 py-2"
+                onClick={() => whileSending(handleReset)}
+                disabled={sending}
+                className="btn-outline px-6 py-2 disabled:opacity-50 disabled:cursor-wait"
               >
                 I am safe now
               </button>

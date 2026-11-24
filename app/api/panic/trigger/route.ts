@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { errorResponse } from "@/lib/apiError";
-import { parsePanicText } from "@/lib/panicResult";
+import { idempotencyHeaders, parsePanicText } from "@/lib/panicResult";
 
 const API_URL = process.env.SANCTUARY_API_URL;
 
@@ -27,6 +27,7 @@ export async function POST(req: NextRequest) {
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${session.backendToken}`,
+        ...idempotencyHeaders(req),
       },
       body: JSON.stringify({ lat: finiteOrUndefined(lat), lng: finiteOrUndefined(lng) }),
     });

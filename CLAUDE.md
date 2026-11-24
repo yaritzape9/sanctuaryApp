@@ -109,6 +109,11 @@ yp-[featureName]
   error, so fetchWithRetry can't text contacts twice. /panic shows "Alert
   reached 2 of 3 contacts" on a partial send, and on 422 an inline notice
   with a link to /profile; /safe does the same for the all-clear
+- Panic idempotency (yp-panicIdempotencyKey): each panic and all-clear press
+  sends one Idempotency-Key (crypto.randomUUID) that fetchWithRetry reuses on
+  every retry, so a lost reply can't text contacts twice. The proxies forward
+  it only when it's a UUID (lib/panicResult.ts idempotencyHeaders). Both
+  buttons are disabled while sending, so a double tap sends once
 - Full roadmap lives in the "Sanctuary — Status & Backlog" Claude Doc
 - In progress: yp-authCredentials (bridge NextAuth credentials login to
   backend JWT), then yp-authOAuth (Google sync), then yp-protectedRoutes
